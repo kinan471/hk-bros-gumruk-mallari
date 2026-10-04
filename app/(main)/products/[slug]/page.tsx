@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
+import NextImage from 'next/image'; // ✅ تم تغيير الاسم لتجنب التعارض مع HTMLImageElement
 import Link from 'next/link';
 import { ArrowLeft, Truck, Shield, RotateCcw, Star, Zap } from 'lucide-react';
 import ProductReviewsSection from '@/components/products/ProductReviewsSection';
-import ProductGallery from '@/components/products/ProductGallery'; // ✅ استيراد المكون الجديد
 
 // ✅ 1. إجبار Next.js على البناء الثابت (Static) والتخزين المؤقت لمدة ساعة
 export const dynamic = 'force-static';
@@ -32,7 +32,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const { slug } = await params;
   const supabase = await createClient();
 
-  // ✅ 2. جلب بيانات المنتج الأساسية فقط (تقليل حجم البيانات المنقولة)
+  // ✅ 2. جلب بيانات المنتج الأساسية فقط
   const { data: product, error } = await supabase
     .from('products')
     .select('id, name, slug, brand, regular_price, sale_price, short_description, description, track_inventory, stock_status, stock_quantity, product_type, weight, length, width, height, sku, main_image, is_featured, is_on_sale, category_id')
@@ -44,7 +44,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     notFound();
   }
 
-  // ✅ 3. جلب البيانات المتبقية بشكل متوازي (Parallel Fetching) لتسريع الوقت الإجمالي
+  // ✅ 3. جلب البيانات المتبقية بشكل متوازي (Parallel Fetching)
   const [galleryRes, relatedRes, ratingRes] = await Promise.all([
     supabase.from('product_images').select('image_url').eq('product_id', product.id).order('display_order'),
     supabase
@@ -57,7 +57,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     supabase.from('reviews').select('rating').eq('product_id', product.id).eq('is_approved', true)
   ]);
 
-  const galleryImages = galleryRes.data?.map(img => img.image_url) || [];
+  const galleryImages = galleryRes.data || [];
   const relatedProducts = relatedRes.data || [];
   const ratings = ratingRes.data || [];
 
@@ -65,6 +65,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     ? Math.round((ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length) * 10) / 10 
     : 0;
 
+  const allImages = [product.main_image, ...galleryImages.map((img: any) => img.image_url)];
   const hasDiscount = product.sale_price && product.sale_price < (product.regular_price || 0);
   const discountPercentage = hasDiscount 
     ? Math.round((1 - (product.sale_price || 0) / (product.regular_price || 1)) * 100) 
@@ -109,14 +110,45 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* ✅ 4. استخدام مكون معرض الصور التفاعلي المحسن */}
-          <ProductGallery 
-            mainImage={product.main_image}
-            galleryImages={galleryImages}
-            productName={product.name}
-            hasDiscount={hasDiscount}
-            discountPercentage={discountPercentage}
-          />
+          {/* === GALLERY === */}
+          <div className="space-y-4">
+            <div className="aspect-square bg-white rounded-2xl overflow-hidden relative group shadow-sm">
+              {/* ✅ استخدام NextImage بدلاً من Image لتجنب خطأ TypeScript */}
+              <NextImage
+                src={product.main_image}
+                alt={product.name}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                priority={true}
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
+                quality={85}
+              />
+              
+              {hasDiscount && (
+                <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg flex items-center gap-1">
+                  <Zap className="w-4 h-4 fill-current" />
+                  %{discountPercentage} İndirim
+                </div>
+              )}
+            </div>
+            
+            {allImages.length > 1 && (
+              <div className="grid grid-cols-4 gap-2">
+                {allImages.map((img, index) => (
+                  <div key={index} className="aspect-square bg-white rounded-lg overflow-hidden border-2 border-transparent hover:border-[#1E3A5F] transition-all cursor-pointer relative shadow-sm">
+                    <NextImage 
+                      src={img} 
+                      alt={`${product.name} ${index + 1}`} 
+                      fill 
+                      className="object-cover" 
+                      sizes="25vw" 
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* === PRODUCT INFO === */}
           <div className="space-y-6">
@@ -250,7 +282,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 return (
                   <Link key={related.id} href={`/products/${related.slug}`} className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100 hover:-translate-y-1">
                     <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                      <Image 
+                      <NextImage 
                         src={related.main_image} 
                         alt={related.name} 
                         fill 
