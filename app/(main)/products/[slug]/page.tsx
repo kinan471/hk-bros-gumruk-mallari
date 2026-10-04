@@ -1,13 +1,13 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Truck, Shield, RotateCcw, Star, Zap } from 'lucide-react';
 import ProductReviewsSection from '@/components/products/ProductReviewsSection';
-import OrderButton from '@/components/products/OrderButton';
+import ProductGallery from '@/components/products/ProductGallery'; // ✅ استيراد المكون الجديد
 
-// ✅ تحسين الأداء: إعادة بناء الصفحة كل 60 ثانية فقط
-export const revalidate = 60;
+// ✅ 1. إجبار Next.js على البناء الثابت (Static) والتخزين المؤقت لمدة ساعة
+export const dynamic = 'force-static';
+export const revalidate = 3600;
 
 interface ProductDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -16,26 +16,23 @@ interface ProductDetailPageProps {
 export async function generateMetadata({ params }: ProductDetailPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data: product } = await supabase.from('products').select('name, short_description').eq('slug', slug).single();
+  const { data: product } = await supabase
+    .from('products')
+    .select('name, short_description')
+    .eq('slug', slug)
+    .single();
+    
   return {
     title: product ? `${product.name} - HK BROS` : 'Ürün Bulunamadı',
     description: product?.short_description || 'HK BROS Gümrük Malları',
   };
 }
 
-async function getProductRating(productId: string) {
-  const supabase = await createClient();
-  const { data } = await supabase.from('reviews').select('rating').eq('product_id', productId).eq('is_approved', true);
-  if (!data || data.length === 0) return { avg: 0, count: 0 };
-  const avg = data.reduce((sum, r) => sum + r.rating, 0) / data.length;
-  return { avg: Math.round(avg * 10) / 10, count: data.length };
-}
-
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  // ✅ تحسين الاستعلام: جلب بيانات المنتج الأساسية فقط
+  // ✅ 2. جلب بيانات المنتج الأساسية فقط (تقليل حجم البيانات المنقولة)
   const { data: product, error } = await supabase
     .from('products')
     .select('id, name, slug, brand, regular_price, sale_price, short_description, description, track_inventory, stock_status, stock_quantity, product_type, weight, length, width, height, sku, main_image, is_featured, is_on_sale, category_id')
@@ -43,25 +40,35 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     .eq('is_active', true)
     .single();
 
-  if (error || !product) notFound();
+  if (error || !product) {
+    notFound();
+  }
 
-  // جلب الصور
-  const { data: galleryImages } = await supabase.from('product_images').select('image_url').eq('product_id', product.id).order('display_order');
-  
-  // جلب المنتجات المشابهة
-  const { data: relatedProducts } = await supabase
-    .from('products')
-    .select('id, name, slug, regular_price, sale_price, main_image, is_on_sale')
-    .eq('category_id', product.category_id)
-    .eq('is_active', true)
-    .neq('id', product.id)
-    .limit(4);
+  // ✅ 3. جلب البيانات المتبقية بشكل متوازي (Parallel Fetching) لتسريع الوقت الإجمالي
+  const [galleryRes, relatedRes, ratingRes] = await Promise.all([
+    supabase.from('product_images').select('image_url').eq('product_id', product.id).order('display_order'),
+    supabase
+      .from('products')
+      .select('id, name, slug, regular_price, sale_price, main_image, is_on_sale')
+      .eq('category_id', product.category_id)
+      .eq('is_active', true)
+      .neq('id', product.id)
+      .limit(4),
+    supabase.from('reviews').select('rating').eq('product_id', product.id).eq('is_approved', true)
+  ]);
 
-  const { avg: avgRating, count: reviewCount } = await getProductRating(product.id);
+  const galleryImages = galleryRes.data?.map(img => img.image_url) || [];
+  const relatedProducts = relatedRes.data || [];
+  const ratings = ratingRes.data || [];
 
-  const allImages = [product.main_image, ...(galleryImages?.map(img => img.image_url) || [])];
+  const avgRating = ratings.length > 0 
+    ? Math.round((ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length) * 10) / 10 
+    : 0;
+
   const hasDiscount = product.sale_price && product.sale_price < (product.regular_price || 0);
-  const discountPercentage = hasDiscount ? Math.round((1 - (product.sale_price || 0) / (product.regular_price || 1)) * 100) : 0;
+  const discountPercentage = hasDiscount 
+    ? Math.round((1 - (product.sale_price || 0) / (product.regular_price || 1)) * 100) 
+    : 0;
 
   // بناء Breadcrumb
   let breadcrumbs: any[] = [];
@@ -84,6 +91,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6 flex-wrap">
           <Link href="/" className="hover:text-[#1E3A5F] transition-colors">Ana Sayfa</Link>
           {breadcrumbs.map((cat, index) => (
@@ -101,52 +109,56 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          <div className="space-y-4">
-            <div className="aspect-square bg-white rounded-2xl overflow-hidden relative group shadow-sm">
-              <Image
-                src={product.main_image}
-                alt={product.name}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                priority // ✅ تحسين LCP: تحميل فوري للصورة الرئيسية
-                sizes="(max-width: 1024px) 100vw, 50vw" // ✅ تحسين الأداء: تحديد حجم الصورة حسب الشاشة
-              />
-              {hasDiscount && (
-                <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg flex items-center gap-1">
-                  <Zap className="w-4 h-4 fill-current" />
-                  %{discountPercentage} İndirim
-                </div>
-              )}
-            </div>
-            {allImages.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {allImages.map((img, index) => (
-                  <div key={index} className="aspect-square bg-white rounded-lg overflow-hidden border-2 border-transparent hover:border-[#1E3A5F] transition-all cursor-pointer relative shadow-sm">
-                    <Image src={img} alt={`${product.name} ${index + 1}`} fill className="object-cover" sizes="25vw" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* ✅ 4. استخدام مكون معرض الصور التفاعلي المحسن */}
+          <ProductGallery 
+            mainImage={product.main_image}
+            galleryImages={galleryImages}
+            productName={product.name}
+            hasDiscount={hasDiscount}
+            discountPercentage={discountPercentage}
+          />
 
+          {/* === PRODUCT INFO === */}
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-3 flex-wrap">
-                {product.is_featured && <span className="px-3 py-1 bg-gradient-to-r from-[#E8B04B] to-[#F5C06B] text-white text-xs font-bold rounded-full flex items-center gap-1"><Star className="w-3 h-3 fill-current" /> Öne Çıkan</span>}
-                {product.is_on_sale && <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">İndirim</span>}
+                {product.is_featured && (
+                  <span className="px-3 py-1 bg-gradient-to-r from-[#E8B04B] to-[#F5C06B] text-white text-xs font-bold rounded-full flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-current" /> Öne Çıkan
+                  </span>
+                )}
+                {product.is_on_sale && (
+                  <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">İndirim</span>
+                )}
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 leading-tight">{product.name}</h1>
-              {product.brand && <p className="text-gray-600 mb-4 flex items-center gap-2"><span className="text-gray-400">Marka:</span> <span className="font-semibold text-gray-900">{product.brand}</span></p>}
+              
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 leading-tight">
+                {product.name}
+              </h1>
+              
+              {product.brand && (
+                <p className="text-gray-600 mb-4 flex items-center gap-2">
+                  <span className="text-gray-400">Marka:</span> 
+                  <span className="font-semibold text-gray-900">{product.brand}</span>
+                </p>
+              )}
+
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex">
                   {[1, 2, 3, 4, 5].map(star => (
-                    <Star key={star} className={`w-5 h-5 ${star <= Math.round(avgRating) ? 'text-[#E8B04B] fill-current' : 'text-gray-300'}`} />
+                    <Star
+                      key={star}
+                      className={`w-5 h-5 ${star <= Math.round(avgRating) ? 'text-[#E8B04B] fill-current' : 'text-gray-300'}`}
+                    />
                   ))}
                 </div>
-                <span className="text-sm text-gray-600">{avgRating > 0 ? `${avgRating} (${reviewCount} değerlendirme)` : 'Henüz değerlendirme yok'}</span>
+                <span className="text-sm text-gray-600">
+                  {avgRating > 0 ? `${avgRating} (${ratings.length} değerlendirme)` : 'Henüz değerlendirme yok'}
+                </span>
               </div>
             </div>
 
+            {/* Price */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-100 shadow-sm">
               {product.sale_price ? (
                 <div className="flex items-baseline gap-3 flex-wrap">
@@ -176,7 +188,18 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               </div>
             )}
 
-            <OrderButton product={product} />
+            {/* WhatsApp Button */}
+            <a 
+              href={`https://wa.me/905551234567?text=${encodeURIComponent(`Merhaba, ${product.name} ürünü hakkında bilgi almak istiyorum.`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-xl font-bold hover:from-green-600 hover:to-green-700 transition-all shadow-lg shadow-green-500/30 hover:scale-[1.02]"
+            >
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+              </svg>
+              <span>WhatsApp ile Sipariş Ver</span>
+            </a>
 
             <div className="grid grid-cols-3 gap-3">
               <div className="flex flex-col items-center text-center p-3 bg-white rounded-xl border border-gray-100">
@@ -197,27 +220,47 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
 
         {product.description && (
           <div className="mt-12 bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2"><div className="w-1 h-6 bg-[#1E3A5F] rounded-full"></div>Ürün Açıklaması</h2>
-            <div className="prose max-w-none text-gray-700 whitespace-pre-line leading-relaxed">{product.description}</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <div className="w-1 h-6 bg-[#1E3A5F] rounded-full"></div>
+              Ürün Açıklaması
+            </h2>
+            <div className="prose max-w-none text-gray-700 whitespace-pre-line leading-relaxed">
+              {product.description}
+            </div>
           </div>
         )}
 
         <div className="mt-12 space-y-6">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><div className="w-1 h-6 bg-[#1E3A5F] rounded-full"></div>Müşteri Değerlendirmeleri</h2>
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <div className="w-1 h-6 bg-[#1E3A5F] rounded-full"></div>
+            Müşteri Değerlendirmeleri
+          </h2>
           <ProductReviewsSection productId={product.id} />
         </div>
 
         {relatedProducts && relatedProducts.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2"><div className="w-1 h-6 bg-[#1E3A5F] rounded-full"></div>Benzer Ürünler</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <div className="w-1 h-6 bg-[#1E3A5F] rounded-full"></div>
+              Benzer Ürünler
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {relatedProducts.map((related: any) => {
                 const relHasDiscount = related.sale_price && related.sale_price < (related.regular_price || 0);
                 return (
                   <Link key={related.id} href={`/products/${related.slug}`} className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100 hover:-translate-y-1">
                     <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                      <Image src={related.main_image} alt={related.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="25vw" />
-                      {relHasDiscount && <span className="absolute top-2 left-2 px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-full">İndirim</span>}
+                      <Image 
+                        src={related.main_image} 
+                        alt={related.name} 
+                        fill 
+                        className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                        sizes="25vw"
+                        loading="lazy"
+                      />
+                      {relHasDiscount && (
+                        <span className="absolute top-2 left-2 px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-full">İndirim</span>
+                      )}
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold text-gray-900 mb-2 text-sm line-clamp-2 group-hover:text-[#1E3A5F] transition-colors">{related.name}</h3>

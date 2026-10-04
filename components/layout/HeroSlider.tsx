@@ -11,7 +11,7 @@ const heroSlides = [
     title: 'Yeni Sezon Ürünleri',
     subtitle: 'En son teknoloji ve moda trendleri',
     cta: 'Keşfet',
-    link: '/category/telefonlar-aksesuarlar',
+    link: '/products',
     bg: 'from-[#1E3A5F] via-[#2C5282] to-[#4A90A4]',
     image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&q=80',
   },
