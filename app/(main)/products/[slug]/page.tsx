@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import NextImage from 'next/image'; // ✅ تم تغيير الاسم لتجنب التعارض مع HTMLImageElement
+import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Truck, Shield, RotateCcw, Star, Zap } from 'lucide-react';
+import { ArrowLeft, Truck, Shield, RotateCcw, Star } from 'lucide-react';
 import ProductReviewsSection from '@/components/products/ProductReviewsSection';
+import ProductGallery from '@/components/products/ProductGallery'; // ✅ استيراد المكون الجديد
 
-// ✅ 1. إجبار Next.js على البناء الثابت (Static) والتخزين المؤقت لمدة ساعة
 export const dynamic = 'force-static';
 export const revalidate = 3600;
 
@@ -32,7 +32,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const { slug } = await params;
   const supabase = await createClient();
 
-  // ✅ 2. جلب بيانات المنتج الأساسية فقط
   const { data: product, error } = await supabase
     .from('products')
     .select('id, name, slug, brand, regular_price, sale_price, short_description, description, track_inventory, stock_status, stock_quantity, product_type, weight, length, width, height, sku, main_image, is_featured, is_on_sale, category_id')
@@ -44,20 +43,14 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     notFound();
   }
 
-  // ✅ 3. جلب البيانات المتبقية بشكل متوازي (Parallel Fetching)
+  // جلب البيانات المتوازية
   const [galleryRes, relatedRes, ratingRes] = await Promise.all([
     supabase.from('product_images').select('image_url').eq('product_id', product.id).order('display_order'),
-    supabase
-      .from('products')
-      .select('id, name, slug, regular_price, sale_price, main_image, is_on_sale')
-      .eq('category_id', product.category_id)
-      .eq('is_active', true)
-      .neq('id', product.id)
-      .limit(4),
+    supabase.from('products').select('id, name, slug, regular_price, sale_price, main_image, is_on_sale').eq('category_id', product.category_id).eq('is_active', true).neq('id', product.id).limit(4),
     supabase.from('reviews').select('rating').eq('product_id', product.id).eq('is_approved', true)
   ]);
 
-  const galleryImages = galleryRes.data || [];
+  const galleryImages = galleryRes.data?.map((img: any) => img.image_url) || [];
   const relatedProducts = relatedRes.data || [];
   const ratings = ratingRes.data || [];
 
@@ -65,7 +58,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     ? Math.round((ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length) * 10) / 10 
     : 0;
 
-  const allImages = [product.main_image, ...galleryImages.map((img: any) => img.image_url)];
   const hasDiscount = product.sale_price && product.sale_price < (product.regular_price || 0);
   const discountPercentage = hasDiscount 
     ? Math.round((1 - (product.sale_price || 0) / (product.regular_price || 1)) * 100) 
@@ -92,7 +84,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6 flex-wrap">
           <Link href="/" className="hover:text-[#1E3A5F] transition-colors">Ana Sayfa</Link>
           {breadcrumbs.map((cat, index) => (
@@ -110,47 +101,16 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* === GALLERY === */}
-          <div className="space-y-4">
-            <div className="aspect-square bg-white rounded-2xl overflow-hidden relative group shadow-sm">
-              {/* ✅ استخدام NextImage بدلاً من Image لتجنب خطأ TypeScript */}
-              <NextImage
-                src={product.main_image}
-                alt={product.name}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                priority={true}
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
-                quality={85}
-              />
-              
-              {hasDiscount && (
-                <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg flex items-center gap-1">
-                  <Zap className="w-4 h-4 fill-current" />
-                  %{discountPercentage} İndirim
-                </div>
-              )}
-            </div>
-            
-            {allImages.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {allImages.map((img, index) => (
-                  <div key={index} className="aspect-square bg-white rounded-lg overflow-hidden border-2 border-transparent hover:border-[#1E3A5F] transition-all cursor-pointer relative shadow-sm">
-                    <NextImage 
-                      src={img} 
-                      alt={`${product.name} ${index + 1}`} 
-                      fill 
-                      className="object-cover" 
-                      sizes="25vw" 
-                      loading="lazy"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* ✅ استخدام مكون معرض الصور التفاعلي هنا */}
+          <ProductGallery 
+            mainImage={product.main_image}
+            galleryImages={galleryImages}
+            productName={product.name}
+            hasDiscount={hasDiscount}
+            discountPercentage={discountPercentage}
+          />
 
-          {/* === PRODUCT INFO === */}
+          {/* === معلومات المنتج === */}
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -164,9 +124,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 )}
               </div>
               
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 leading-tight">
-                {product.name}
-              </h1>
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 leading-tight">{product.name}</h1>
               
               {product.brand && (
                 <p className="text-gray-600 mb-4 flex items-center gap-2">
@@ -178,10 +136,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex">
                   {[1, 2, 3, 4, 5].map(star => (
-                    <Star
-                      key={star}
-                      className={`w-5 h-5 ${star <= Math.round(avgRating) ? 'text-[#E8B04B] fill-current' : 'text-gray-300'}`}
-                    />
+                    <Star key={star} className={`w-5 h-5 ${star <= Math.round(avgRating) ? 'text-[#E8B04B] fill-current' : 'text-gray-300'}`} />
                   ))}
                 </div>
                 <span className="text-sm text-gray-600">
@@ -190,7 +145,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               </div>
             </div>
 
-            {/* Price */}
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-100 shadow-sm">
               {product.sale_price ? (
                 <div className="flex items-baseline gap-3 flex-wrap">
@@ -220,7 +174,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               </div>
             )}
 
-            {/* WhatsApp Button */}
             <a 
               href={`https://wa.me/905551234567?text=${encodeURIComponent(`Merhaba, ${product.name} ürünü hakkında bilgi almak istiyorum.`)}`}
               target="_blank"
@@ -282,7 +235,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 return (
                   <Link key={related.id} href={`/products/${related.slug}`} className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100 hover:-translate-y-1">
                     <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                      <NextImage 
+                      <Image 
                         src={related.main_image} 
                         alt={related.name} 
                         fill 
