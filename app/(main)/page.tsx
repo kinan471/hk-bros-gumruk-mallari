@@ -7,7 +7,7 @@ import { ChevronRight, Star, Zap, TrendingUp } from 'lucide-react';
 // ✅ إجبار Next.js على بناء الصفحة بشكل ثابت (Static) وتحديثها كل ساعة (3600 ثانية)
 // هذا هو السحر الحقيقي للأداء في Next.js App Router
 export const dynamic = 'force-static';
-export const revalidate = 3600;
+export const revalidate = 120;
 
 export const metadata = {
   title: 'HK BROS GÜMRÜK MALLARI',
