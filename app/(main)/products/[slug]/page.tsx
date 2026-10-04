@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Truck, Shield, RotateCcw, Star, Zap } from 'lucide-react';
+import { ArrowLeft, Truck, Shield, RotateCcw, Star } from 'lucide-react';
 import ProductReviewsSection from '@/components/products/ProductReviewsSection';
+import ProductGallery from '@/components/products/ProductGallery';
 
 export const dynamic = 'force-static';
 export const revalidate = 3600;
@@ -43,13 +43,14 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     notFound();
   }
 
+  // جلب البيانات المتوازية
   const [galleryRes, relatedRes, ratingRes] = await Promise.all([
     supabase.from('product_images').select('image_url').eq('product_id', product.id).order('display_order'),
     supabase.from('products').select('id, name, slug, regular_price, sale_price, main_image, is_on_sale').eq('category_id', product.category_id).eq('is_active', true).neq('id', product.id).limit(4),
     supabase.from('reviews').select('rating').eq('product_id', product.id).eq('is_approved', true)
   ]);
 
-  const galleryImages = galleryRes.data || [];
+  const galleryImages = galleryRes.data?.map((img: any) => img.image_url) || [];
   const relatedProducts = relatedRes.data || [];
   const ratings = ratingRes.data || [];
 
@@ -57,12 +58,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     ? Math.round((ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length) * 10) / 10 
     : 0;
 
-  const allImages = [product.main_image, ...galleryImages.map((img: any) => img.image_url)];
   const hasDiscount = product.sale_price && product.sale_price < (product.regular_price || 0);
   const discountPercentage = hasDiscount 
     ? Math.round((1 - (product.sale_price || 0) / (product.regular_price || 1)) * 100) 
     : 0;
 
+  // بناء Breadcrumb
   let breadcrumbs: any[] = [];
   if (product.category_id) {
     const { data: cat } = await supabase.from('categories').select('id, name, slug, parent_id').eq('id', product.category_id).single();
@@ -80,24 +81,24 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     }
   }
 
-  // دالة مساعدة لتحديد نمط حالة المنتج
-  const getConditionStyle = (condition: string) => {
-    if (condition.includes('Sıfır')) return 'bg-green-50 border-green-200';
-    if (condition.includes('Kutu Açılmış')) return 'bg-yellow-50 border-yellow-200';
-    if (condition.includes('Teşhir')) return 'bg-orange-50 border-orange-200';
-    return 'bg-gray-50 border-gray-200';
-  };
-
-  const getConditionIcon = (condition: string) => {
-    if (condition.includes('Sıfır')) return '🟢';
-    if (condition.includes('Kutu Açılmış')) return '🟡';
-    if (condition.includes('Teşhir')) return '🟠';
-    return '🟤';
-  };
+  // ✅ رسالة واتساب ديناميكية تتضمن حالة المنتج
+  const currentPrice = product.sale_price || product.regular_price || 0;
+  const stockText = product.track_inventory 
+    ? (product.stock_quantity > 0 ? `${product.stock_quantity} adet` : 'Tükendi') 
+    : 'Stokta Var';
+  
+  const whatsappMessage = `Merhaba HK BROS, web sitenizdeki aşağıdaki ürün hakkında bilgi almak ve sipariş vermek istiyorum.%0A%0A` +
+    `📦 *Ürün:* ${product.name}%0A` +
+    `💰 *Fiyat:* ${currentPrice}%0A` +
+    `📊 *Stok:* ${stockText}%0A` +
+    `🏷️ *Durum:* ${product.product_condition || 'Belirtilmemiş'}%0A` +
+    ` *Link:* https://hk-bros-gumruk-mallari.vercel.app/products/${product.slug}%0A%0A` +
+    `Teşekkürler.`;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6 flex-wrap">
           <Link href="/" className="hover:text-[#1E3A5F] transition-colors">Ana Sayfa</Link>
           {breadcrumbs.map((cat, index) => (
@@ -115,35 +116,17 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          <div className="space-y-4">
-            <div className="aspect-square bg-white rounded-2xl overflow-hidden relative group shadow-sm">
-              <Image
-                src={product.main_image}
-                alt={product.name}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                priority={true}
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
-                quality={85}
-              />
-              {hasDiscount && (
-                <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg flex items-center gap-1">
-                  <Zap className="w-4 h-4 fill-current" />
-                  %{discountPercentage} İndirim
-                </div>
-              )}
-            </div>
-            {allImages.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {allImages.map((img, index) => (
-                  <div key={index} className="aspect-square bg-white rounded-lg overflow-hidden border-2 border-transparent hover:border-[#1E3A5F] transition-all cursor-pointer relative shadow-sm">
-                    <Image src={img} alt={`${product.name} ${index + 1}`} fill className="object-cover" sizes="25vw" loading="lazy" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* ✅ استخدام مكون معرض الصور التفاعلي */}
+          <ProductGallery 
+            mainImage={product.main_image}
+            galleryImages={galleryImages}
+            productName={product.name}
+            hasDiscount={hasDiscount}
+            discountPercentage={discountPercentage}
+            productCondition={product.product_condition}
+          />
 
+          {/* === معلومات المنتج === */}
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -204,25 +187,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               </div>
             )}
 
-            {/* ✅ قسم حالة المنتج الجديد والمميز */}
-            {product.product_condition && (
-              <div className={`p-4 rounded-xl border ${getConditionStyle(product.product_condition)}`}>
-                <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-[#1E3A5F]" />
-                  Ürün Durumu
-                </h4>
-                <p className="text-sm text-gray-700">
-                  <span className="font-semibold">Bu ürün: </span>
-                  {getConditionIcon(product.product_condition)} {product.product_condition}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  * Gümrük malları doğası gereği ambalajında küçük değişiklikler olabilir, ancak ürün işlevselliği ve orijinalliği %100 garantilidir.
-                </p>
-              </div>
-            )}
-
+            {/* ✅ زر واتساب مع رسالة ديناميكية */}
             <a 
-              href={`https://wa.me/905314319921?text=${encodeURIComponent(`Merhaba, ${product.name} ürünü hakkında bilgi almak ve sipariş vermek istiyorum.\n\nÜrün: ${product.name}\nFiyat: ₺${product.sale_price || product.regular_price}\nDurum: ${product.product_condition || 'Belirtilmemiş'}\nLink: https://hk-bros-gumruk-mallari.vercel.app/products/${product.slug}`)}`}
+              href={`https://wa.me/905551234567?text=${whatsappMessage}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-xl font-bold hover:from-green-600 hover:to-green-700 transition-all shadow-lg shadow-green-500/30 hover:scale-[1.02]"
@@ -282,7 +249,14 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 return (
                   <Link key={related.id} href={`/products/${related.slug}`} className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100 hover:-translate-y-1">
                     <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                      <Image src={related.main_image} alt={related.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="25vw" loading="lazy" />
+                      <Image 
+                        src={related.main_image} 
+                        alt={related.name} 
+                        fill 
+                        className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                        sizes="25vw"
+                        loading="lazy"
+                      />
                       {relHasDiscount && (
                         <span className="absolute top-2 left-2 px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-full">İndirim</span>
                       )}
