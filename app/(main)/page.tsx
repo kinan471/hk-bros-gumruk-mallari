@@ -114,7 +114,7 @@ export default async function HomePage() {
               </Link>
             </div>
           </div>
-        </div>
+        </section>
       )}
 
       {latestProducts && latestProducts.length > 0 && (
