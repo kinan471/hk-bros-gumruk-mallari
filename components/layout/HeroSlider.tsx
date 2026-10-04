@@ -24,15 +24,15 @@ const heroSlides = [
     bg: 'from-red-600 via-red-500 to-orange-500',
     image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&q=80',
   },
-{
-  id: 3,
-  title: 'Premium Kalite',
-  subtitle: 'Orijinal ürünler, garantili alışveriş',
-  cta: 'Ürünleri İncele',
-  link: '/products',
-  bg: 'from-[#E8B04B] via-[#F5C06B] to-[#E8B04B]',
-  image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&q=80',
-},
+  {
+    id: 3,
+    title: 'Premium Kalite',
+    subtitle: 'Orijinal ürünler, garantili alışveriş',
+    cta: 'Ürünleri İncele',
+    link: '/products',
+    bg: 'from-[#E8B04B] via-[#F5C06B] to-[#E8B04B]',
+    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&q=80',
+  },
 ];
 
 export default function HeroSlider() {
@@ -54,9 +54,10 @@ export default function HeroSlider() {
   useEffect(() => {
     if (isPaused) return;
 
+    // ✅ تم زيادة الوقت إلى 5000ms لتقليل استهلاك موارد المتصفح
     const timer = setInterval(() => {
       goToNext();
-    }, 2000);
+    }, 5000);
 
     return () => clearInterval(timer);
   }, [isPaused, goToNext]);
@@ -71,7 +72,7 @@ export default function HeroSlider() {
         className="flex h-full transition-transform duration-700 ease-in-out"
         style={{ transform: `translateX(-${currentSlide * 100}%)` }}
       >
-        {heroSlides.map((slide) => (
+        {heroSlides.map((slide, index) => (
           <div
             key={slide.id}
             className={`min-w-full h-full relative bg-gradient-to-r ${slide.bg} flex items-center flex-shrink-0`}
@@ -82,7 +83,12 @@ export default function HeroSlider() {
                 alt={slide.title}
                 fill
                 className="object-cover"
-                priority
+                // ✅ الإصلاح 1: فقط الشريحة الأولى تحصل على أولوية التحميل (LCP)
+                priority={index === 0}
+                // ✅ الإصلاح 2: إخبار المتصفح بحجم الصورة لتحميل الدقة المناسبة للجوال
+                sizes="100vw"
+                // ✅ الإصلاح 3: ضغط الصورة تلقائياً بنسبة 15% لتسريع التحميل
+                quality={85}
               />
             </div>
 
