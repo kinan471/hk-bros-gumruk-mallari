@@ -15,12 +15,10 @@ export const metadata = {
 export default async function HomePage() {
   const supabase = await createClient();
 
-  // ✅ تحسين الاستعلام: جلب الأعمدة المطلوبة فقط لتقليل حجم البيانات
-  const columns = 'id, name, slug, regular_price, sale_price, main_image, is_on_sale, is_featured';
-
+  // ✅ تم الإصلاح: استرجاع جميع الحقول المطلوبة بواسطة ProductCard لتجنب خطأ TypeScript
   const { data: featuredProducts } = await supabase
     .from('products')
-    .select(columns)
+    .select('*, categories(name, slug)')
     .eq('is_featured', true)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
@@ -28,7 +26,7 @@ export default async function HomePage() {
 
   const { data: saleProducts } = await supabase
     .from('products')
-    .select(columns)
+    .select('*, categories(name, slug)')
     .not('sale_price', 'is', null)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
@@ -36,7 +34,7 @@ export default async function HomePage() {
 
   const { data: latestProducts } = await supabase
     .from('products')
-    .select(columns)
+    .select('*, categories(name, slug)')
     .eq('is_active', true)
     .order('created_at', { ascending: false })
     .limit(8);
