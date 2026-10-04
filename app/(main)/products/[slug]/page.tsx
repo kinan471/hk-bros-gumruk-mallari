@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, Truck, Shield, RotateCcw, Star } from 'lucide-react';
 import ProductReviewsSection from '@/components/products/ProductReviewsSection';
 import ProductGallery from '@/components/products/ProductGallery';
+import NextImage from 'next/image';
 
 export const dynamic = 'force-static';
 export const revalidate = 3600;
@@ -249,7 +250,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 return (
                   <Link key={related.id} href={`/products/${related.slug}`} className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100 hover:-translate-y-1">
                     <div className="aspect-square bg-gray-100 relative overflow-hidden">
-                      <Image 
+                      <NextImage 
                         src={related.main_image} 
                         alt={related.name} 
                         fill 
