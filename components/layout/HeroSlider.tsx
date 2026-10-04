@@ -54,7 +54,6 @@ export default function HeroSlider() {
   useEffect(() => {
     if (isPaused) return;
 
-    // ✅ تم زيادة الوقت إلى 5000ms لتقليل استهلاك موارد المتصفح
     const timer = setInterval(() => {
       goToNext();
     }, 5000);
@@ -83,11 +82,8 @@ export default function HeroSlider() {
                 alt={slide.title}
                 fill
                 className="object-cover"
-                // ✅ الإصلاح 1: فقط الشريحة الأولى تحصل على أولوية التحميل (LCP)
                 priority={index === 0}
-                // ✅ الإصلاح 2: إخبار المتصفح بحجم الصورة لتحميل الدقة المناسبة للجوال
                 sizes="100vw"
-                // ✅ الإصلاح 3: ضغط الصورة تلقائياً بنسبة 15% لتسريع التحميل
                 quality={85}
               />
             </div>
@@ -116,14 +112,13 @@ export default function HeroSlider() {
               </div>
             </div>
 
-            <div className="absolute right-0 top-0 w-1/3 h-full opacity-10">
+            <div className="absolute right-0 top-0 w-1/3 h-full opacity-10 pointer-events-none">
               <div className="absolute inset-0 bg-white rounded-full blur-3xl transform translate-x-1/2" />
             </div>
           </div>
         ))}
       </div>
 
-      {/* Navigation Arrows */}
       <button
         onClick={goToPrev}
         className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/40 transition-colors"
@@ -139,7 +134,6 @@ export default function HeroSlider() {
         <ChevronRight className="w-6 h-6 text-white" />
       </button>
 
-      {/* Indicators */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
         {heroSlides.map((_, index) => (
           <button

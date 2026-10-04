@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Heart, Eye, Star, Flame, Zap, Truck } from 'lucide-react';
@@ -22,11 +21,13 @@ export default function ProductCard({ product }: ProductCardProps) {
   const discountPercentage = hasDiscount
     ? Math.round((1 - (product.sale_price || 0) / (product.regular_price || 1)) * 100)
     : 0;
-
   const isLowStock = product.track_inventory && product.stock_quantity > 0 && product.stock_quantity <= 5;
   const stockPercentage = product.track_inventory && product.stock_quantity > 0
     ? Math.min((product.stock_quantity / 50) * 100, 100)
     : 100;
+
+  // استخراج حالة المنتج بأمان
+  const productCondition = (product as any).product_condition;
 
   useEffect(() => {
     const fetchRating = async () => {
@@ -36,9 +37,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           .select('rating')
           .eq('product_id', product.id)
           .eq('is_approved', true);
-
         if (error) throw error;
-
         if (data && data.length > 0) {
           const avg = data.reduce((sum, r) => sum + r.rating, 0) / data.length;
           setAvgRating(Math.round(avg * 10) / 10);
@@ -48,7 +47,6 @@ export default function ProductCard({ product }: ProductCardProps) {
         console.error('Rating fetch error:', error);
       }
     };
-
     fetchRating();
   }, [product.id, supabase]);
 
@@ -58,8 +56,23 @@ export default function ProductCard({ product }: ProductCardProps) {
     setIsFavorite(!isFavorite);
   };
 
+  // تحديد لون الشارة بناءً على الحالة
+  const getConditionStyle = (condition: string) => {
+    if (condition.includes('Sıfır')) return 'bg-green-100 text-green-700 border-green-200';
+    if (condition.includes('Kutu Açılmış')) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    if (condition.includes('Teşhir')) return 'bg-orange-100 text-orange-700 border-orange-200';
+    return 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  const getConditionIcon = (condition: string) => {
+    if (condition.includes('Sıfır')) return '🟢';
+    if (condition.includes('Kutu Açılmış')) return '🟡';
+    if (condition.includes('Teşhir')) return '🟠';
+    return '🟤';
+  };
+
   return (
-    <Link 
+    <Link
       href={`/products/${product.slug}`}
       className="group relative bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col h-full"
     >
@@ -77,9 +90,8 @@ export default function ProductCard({ product }: ProductCardProps) {
           loading="lazy"
           onLoadingComplete={() => setImageLoaded(true)}
         />
-
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
+        
         {/* === TOP BADGES === */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
           {product.is_featured && (
@@ -94,32 +106,18 @@ export default function ProductCard({ product }: ProductCardProps) {
               %{discountPercentage} İndirim
             </span>
           )}
-          {product.is_on_sale && !hasDiscount && (
-            <span className="bg-red-500 text-white text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
-              İndirim
-            </span>
-          )}
         </div>
 
-        {/* === ACTION BUTTONS (Top Right) === */}
+        {/* === ACTION BUTTONS === */}
         <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
           <button 
             onClick={handleFavorite}
             className={`p-2 rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110 active:scale-95 ${
-              isFavorite 
-                ? 'bg-red-500 text-white' 
-                : 'bg-white/95 text-gray-700 hover:bg-white'
+              isFavorite ? 'bg-red-500 text-white' : 'bg-white/95 text-gray-700 hover:bg-white'
             }`}
             aria-label="Favorilere ekle"
           >
             <Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${isFavorite ? 'fill-current' : ''}`} />
-          </button>
-          
-          <button 
-            className="p-2 bg-white/95 backdrop-blur-sm rounded-full shadow-lg text-gray-700 hover:bg-white hover:text-[#1E3A5F] transition-all duration-300 hover:scale-110 active:scale-95 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0"
-            aria-label="Hızlı bakış"
-          >
-            <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
@@ -139,10 +137,18 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.brand}
           </p>
         )}
-
+        
         <h3 className="font-bold text-gray-900 mb-1.5 text-sm sm:text-base line-clamp-2 group-hover:text-[#1E3A5F] transition-colors leading-snug min-h-[2.5rem]">
           {product.name}
         </h3>
+
+        {/* ✅ شارة حالة المنتج الجديدة */}
+        {productCondition && (
+          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-xs font-semibold mb-2 border ${getConditionStyle(productCondition)} w-fit`}>
+            <span>{getConditionIcon(productCondition)}</span>
+            <span>{productCondition}</span>
+          </div>
+        )}
 
         {/* === REAL RATING === */}
         <div className="flex items-center gap-1 mb-2">
@@ -159,9 +165,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             ))}
           </div>
           {reviewCount > 0 ? (
-            <span className="text-[10px] text-gray-500">
-              ({avgRating}) • {reviewCount} yorum
-            </span>
+            <span className="text-[10px] text-gray-500">({avgRating}) • {reviewCount} yorum</span>
           ) : (
             <span className="text-[10px] text-gray-400">Henüz yorum yok</span>
           )}
@@ -179,7 +183,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               <span className="text-xl sm:text-2xl font-bold text-[#1E3A5F]">₺{product.regular_price || '0'}</span>
             )}
           </div>
-
+          
           {/* Stock Urgency Bar */}
           {isLowStock && (
             <div className="mb-2">

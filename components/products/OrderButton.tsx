@@ -17,6 +17,8 @@ export default function OrderButton({ product }: OrderButtonProps) {
 
     try {
       const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
+      const currentPrice = product.sale_price || product.regular_price;
+      const condition = product.product_condition || 'Belirtilmemiş';
       
       const orderData = {
         order_number: orderNumber,
@@ -27,26 +29,31 @@ export default function OrderButton({ product }: OrderButtonProps) {
           product_id: product.id,
           name: product.name,
           quantity: 1,
-          price: product.sale_price || product.regular_price
+          price: currentPrice
         }],
-        total_amount: product.sale_price || product.regular_price,
+        total_amount: currentPrice,
         status: 'pending',
         payment_status: 'pending',
         source: 'website',
-        notes: `Ürün: ${product.name}\nLink: ${window.location.href}`
+        notes: `Ürün: ${product.name}\nDurum: ${condition}\nLink: ${window.location.href}`
       };
 
       const { error } = await supabase.from('orders').insert([orderData]);
-
       if (error) {
         console.error('Sipariş kaydedilemedi:', error);
       }
 
-      const message = `Merhaba, ${product.name} ürünü hakkında bilgi almak ve sipariş vermek istiyorum.\nSipariş No: ${orderNumber}`;
-      const whatsappUrl = `https://wa.me/905551234567?text=${encodeURIComponent(message)}`;
-      
-      window.open(whatsappUrl, '_blank');
+      // ✅ رسالة واتساب محسنة تتضمن حالة المنتج
+      const message = `Merhaba HK BROS, web sitenizdeki aşağıdaki ürün hakkında bilgi almak ve sipariş vermek istiyorum.%0A%0A` +
+        `📦 *Ürün:* ${product.name}%0A` +
+        ` *Fiyat:* ₺${currentPrice}%0A` +
+        `🏷️ *Durum:* ${condition}%0A` +
+        `🔗 *Link:* ${window.location.href}%0A%0A` +
+        `Sipariş No: ${orderNumber}%0A` +
+        `Teşekkürler.`;
 
+      const whatsappUrl = `https://wa.me/905551234567?text=${message}`;
+      window.open(whatsappUrl, '_blank');
     } catch (error) {
       console.error('Hata:', error);
     } finally {
@@ -55,7 +62,7 @@ export default function OrderButton({ product }: OrderButtonProps) {
   };
 
   return (
-    <button 
+    <button
       onClick={handleOrder}
       disabled={isProcessing}
       className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-xl font-bold hover:from-green-600 hover:to-green-700 transition-all shadow-lg shadow-green-500/30 hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"

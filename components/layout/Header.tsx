@@ -30,6 +30,9 @@ export default function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const mobileDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const mobileDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -49,25 +52,42 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [supabase]);
 
+  // إغلاق جميع القوائم والنتائج عند النقر في أي مكان خارج المكونات المعنية
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      // إغلاق بحث الديسktop
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
+        !dropdownRef.current.contains(target) &&
         searchInputRef.current &&
-        !searchInputRef.current.contains(event.target as Node)
+        !searchInputRef.current.contains(target)
       ) {
         setIsDropdownOpen(false);
       }
+
+      // إغلاق بحث الموبايل
       if (
         mobileDropdownRef.current &&
-        !mobileDropdownRef.current.contains(event.target as Node) &&
+        !mobileDropdownRef.current.contains(target) &&
         mobileSearchInputRef.current &&
-        !mobileSearchInputRef.current.contains(event.target as Node)
+        !mobileSearchInputRef.current.contains(target)
       ) {
         setMobileIsDropdownOpen(false);
       }
+
+      // إغلاق قائمة الموبايل كاملة
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(target) &&
+        menuButtonRef.current &&
+        !menuButtonRef.current.contains(target)
+      ) {
+        setIsMenuOpen(false);
+      }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -129,7 +149,7 @@ export default function Header() {
         setIsDropdownOpen(true);
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('Arama hatası:', error);
       if (isMobile) setMobileSearchResults([]);
       else setSearchResults([]);
     } finally {
@@ -283,7 +303,7 @@ export default function Header() {
             <p className="text-[10px] sm:text-xs text-gray-400 line-through">₺{product.regular_price}</p>
           </>
         ) : (
-          <p className="font-bold text-[#1E3A5F] text-xs sm:text-sm">{product.regular_price || '0'}</p>
+          <p className="font-bold text-[#1E3A5F] text-xs sm:text-sm">₺{product.regular_price || '0'}</p>
         )}
       </div>
     </Link>
@@ -296,30 +316,18 @@ export default function Header() {
       isScrolled ? 'bg-white shadow-md' : 'bg-white/95 backdrop-blur-sm'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-<Link href="/" className="flex items-center gap-3 group">
-  <div className="relative w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center overflow-hidden group-hover:shadow-lg transition-all duration-300 flex-shrink-0">
-    <img 
-      src="/1.jpg" 
-      alt="HK BROS" 
-      className="w-full h-full object-contain p-1"
-    />
-  </div>
-  <div className="hidden sm:flex flex-col justify-center leading-tight">
-    <img 
-      src="/2.jpg" 
-      alt="HK BROS" 
-      className="h-5 w-auto object-contain"
-    />
-    <img 
-      src="/3.jpg" 
-      alt="GÜMRÜK MALLARI" 
-      className="h-5 w-auto object-contain mt-0.5 opacity-70"
-    />
-  </div>
-</Link>
+        <div className="flex items-center justify-between h-20 gap-4">
+          
+          <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
+            <div className="relative w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center overflow-hidden group-hover:shadow-lg transition-all duration-300">
+              <img src="/1.jpg" alt="HK BROS" className="w-full h-full object-contain p-1" />
+            </div>
+            <div className="flex items-center h-8">
+              <img src="/2.jpg" alt="HK BROS Brand" className="h-full w-auto object-contain" />
+            </div>
+          </Link>
 
-          <div className="hidden md:flex flex-1 max-w-2xl mx-8 relative">
+          <div className="hidden md:flex flex-1 max-w-xl relative">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <input
                 ref={searchInputRef}
@@ -329,18 +337,15 @@ export default function Header() {
                 onChange={handleSearchChange}
                 onKeyDown={handleKeyDown}
                 onFocus={() => searchResults.length > 0 && setIsDropdownOpen(true)}
-                className="w-full px-5 py-3 pr-12 rounded-full border-2 border-gray-200 focus:border-[#1E3A5F] focus:outline-none transition-all bg-gray-50 focus:bg-white"
+                className="w-full px-5 py-2.5 pr-12 rounded-full border-2 border-gray-200 focus:border-[#1E3A5F] focus:outline-none transition-all bg-gray-50 focus:bg-white text-sm"
                 autoComplete="off"
               />
               <button
                 type="submit"
+                aria-label="Arama Yap"
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#1E3A5F] transition-colors"
               >
-                {isSearching ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Search className="w-5 h-5" />
-                )}
+                {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               </button>
             </form>
 
@@ -391,16 +396,18 @@ export default function Header() {
             )}
           </div>
 
-          <div className="hidden md:flex items-center gap-4">
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <Heart className="w-6 h-6 text-gray-600" />
+          <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+            <button aria-label="Favoriler" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Heart className="w-5 h-5 text-gray-600" />
             </button>
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <User className="w-6 h-6 text-gray-600" />
+            <button aria-label="Hesabım" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <User className="w-5 h-5 text-gray-600" />
             </button>
           </div>
 
           <button
+            ref={menuButtonRef}
+            aria-label="Menü"
             className="md:hidden p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
@@ -408,27 +415,23 @@ export default function Header() {
           </button>
         </div>
 
+        {/* شريط التصنيفات (تم حذف Ana Sayfa) */}
         <nav className="hidden md:block border-t border-gray-100 py-3">
           <ul className="flex items-center justify-center gap-6 lg:gap-8">
-            <li>
-              <Link href="/" className="text-sm font-medium text-gray-600 hover:text-[#1E3A5F] transition-colors">
-                Ana Sayfa
-              </Link>
-            </li>
             {parentCategories.map((category) => {
               const hasChildren = categories.some(c => c.parent_id === category.id);
               return (
                 <li key={category.id} className="relative group">
                   <Link
                     href={`/category/${category.slug}`}
-                    className="text-sm font-medium text-gray-600 hover:text-[#1E3A5F] transition-colors flex items-center gap-1 py-2"
+                    className="text-sm font-medium text-gray-600 hover:text-[#1E3A5F] transition-colors flex items-center gap-1 py-1"
                   >
                     {category.name}
                     {hasChildren && (
                       <ChevronRight className="w-3 h-3 transition-transform group-hover:rotate-90" />
                     )}
                   </Link>
-                  
+
                   {hasChildren && (
                     <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                       <div className="py-2">
@@ -453,8 +456,9 @@ export default function Header() {
         </nav>
       </div>
 
+      {/* قائمة الموبايل (تم حذف Ana Sayfa) */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100">
+        <div ref={mobileMenuRef} className="md:hidden bg-white border-t border-gray-100">
           <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
             <div className="relative">
               <form onSubmit={handleMobileSearchSubmit} className="relative">
@@ -468,7 +472,7 @@ export default function Header() {
                   className="w-full px-4 py-3 pr-12 rounded-lg border-2 border-gray-200 focus:border-[#1E3A5F] focus:outline-none"
                   autoComplete="off"
                 />
-                <button type="submit" className="absolute right-4 top-1/2 -translate-y-1/2">
+                <button type="submit" aria-label="Arama Yap" className="absolute right-4 top-1/2 -translate-y-1/2">
                   {mobileIsSearching ? (
                     <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
                   ) : (
@@ -523,15 +527,6 @@ export default function Header() {
 
             <nav>
               <ul className="space-y-1">
-                <li>
-                  <Link 
-                    href="/" 
-                    className="block py-2 px-3 text-gray-600 hover:text-[#1E3A5F] hover:bg-gray-50 rounded-lg transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Ana Sayfa
-                  </Link>
-                </li>
                 {parentCategories.map((category) => {
                   const hasChildren = categories.some(c => c.parent_id === category.id);
                   const subcategories = categories.filter(c => c.parent_id === category.id);

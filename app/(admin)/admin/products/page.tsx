@@ -82,8 +82,8 @@ export default function AdminProductsPage() {
       const query = searchQuery.toLowerCase();
       result = result.filter(p =>
         p.name.toLowerCase().includes(query) ||
-        p.sku?.toLowerCase().includes(query) ||
-        p.brand?.toLowerCase().includes(query)
+        (p as any).sku?.toLowerCase().includes(query) ||
+        (p as any).brand?.toLowerCase().includes(query)
       );
     }
 
@@ -307,29 +307,29 @@ export default function AdminProductsPage() {
                 />
                 <div className="absolute top-2 left-2 flex flex-col gap-1">
                   {product.status === 'published' && (
-                    <span className="px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
-                      Yayında
-                    </span>
+                    <span className="px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">Yayında</span>
                   )}
                   {product.status === 'draft' && (
-                    <span className="px-2 py-1 bg-gray-500 text-white text-xs font-semibold rounded-full">
-                      Taslak
-                    </span>
+                    <span className="px-2 py-1 bg-gray-500 text-white text-xs font-semibold rounded-full">Taslak</span>
                   )}
                   {product.stock_quantity <= 5 && product.stock_quantity > 0 && (
-                    <span className="px-2 py-1 bg-orange-500 text-white text-xs font-semibold rounded-full">
-                      Düşük Stok
-                    </span>
+                    <span className="px-2 py-1 bg-orange-500 text-white text-xs font-semibold rounded-full">Düşük Stok</span>
                   )}
                   {product.stock_quantity === 0 && (
-                    <span className="px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-full">
-                      Tükendi
-                    </span>
+                    <span className="px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-full">Tükendi</span>
                   )}
                 </div>
               </div>
               <div className="p-4">
                 <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-2">{product.name}</h3>
+                
+                {/* ✅ عرض حالة المنتج في شبكة المنتجات */}
+                {(product as any).product_condition && (
+                  <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-semibold rounded-full mb-2">
+                    {(product as any).product_condition}
+                  </span>
+                )}
+
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-lg font-bold text-[#1E3A5F]">
                     ₺{product.sale_price || product.regular_price || 0}
@@ -394,7 +394,13 @@ export default function AdminProductsPage() {
                         />
                         <div>
                           <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
-                          <p className="text-xs text-gray-500">{product.sku || 'SKU yok'}</p>
+                          <p className="text-xs text-gray-500">{(product as any).sku || 'SKU yok'}</p>
+                          {/* ✅ عرض حالة المنتج في جدول المنتجات */}
+                          {(product as any).product_condition && (
+                            <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-semibold rounded-full mt-1">
+                              {(product as any).product_condition}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>

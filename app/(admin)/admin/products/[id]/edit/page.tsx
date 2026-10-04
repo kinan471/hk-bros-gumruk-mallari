@@ -152,6 +152,7 @@ export default function EditProductPage() {
     is_on_sale: false,
     meta_title: '',
     meta_description: '',
+    product_condition: 'Sıfır - Kapalı Kutu', // ✅ تم الإضافة
   });
 
   const { data: product, isLoading: loadingProduct } = useQuery({
@@ -221,6 +222,7 @@ export default function EditProductPage() {
         is_on_sale: product.is_on_sale || false,
         meta_title: product.meta_title || '',
         meta_description: product.meta_description || '',
+        product_condition: product.product_condition || 'Sıfır - Kapalı Kutu', // ✅ تم الإضافة
       });
     }
   }, [product]);
@@ -351,6 +353,7 @@ export default function EditProductPage() {
         is_on_sale: formData.is_on_sale,
         meta_title: formData.meta_title || formData.name,
         meta_description: formData.meta_description || formData.short_description,
+        product_condition: formData.product_condition, // ✅ تم الإضافة
         updated_at: new Date().toISOString(),
       };
 
@@ -723,10 +726,26 @@ export default function EditProductPage() {
               )}
             </div>
 
-            {/* Brand & SKU */}
+            {/* Brand, SKU & Condition */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <h3 className="font-semibold text-gray-900 mb-4">Detaylar</h3>
               <div className="space-y-4">
+                {/* ✅ حقل حالة المنتج المضاف */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Ürün Durumu</label>
+                  <select
+                    value={formData.product_condition}
+                    onChange={(e) => setFormData({ ...formData, product_condition: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-[#1E3A5F] outline-none bg-white"
+                  >
+                    <option value="Sıfır - Kapalı Kutu">🟢 Sıfır - Kapalı Kutu</option>
+                    <option value="Kutu Açılmış - Kullanılmamış">🟡 Kutu Açılmış - Kullanılmamış</option>
+                    <option value="Teşhir Ürünü">🟠 Teşhir Ürünü</option>
+                    <option value="Hafif Kozmetik Hasarlı">🟤 Hafif Kozmetik Hasarlı</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Müşteriye şeffaflık sağlamak için doğru durumu seçin.</p>
+                </div>
+                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Marka</label>
                   <input
