@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Providers } from '../providers';
 import {
   LayoutDashboard, Package, Tags, ShoppingCart,
   Settings, LogOut, Menu, X, ChevronRight,
@@ -139,7 +140,7 @@ export default function AdminLayout({
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto">
-          {children}
+          <Providers>{children}</Providers>
         </main>
       </div>
     </div>

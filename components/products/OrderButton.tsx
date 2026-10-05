@@ -4,8 +4,17 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2 } from 'lucide-react';
 
+interface OrderProduct {
+  id: string;
+  name: string;
+  slug: string;
+  regular_price: number | null;
+  sale_price: number | null;
+  product_condition?: string | null;
+}
+
 interface OrderButtonProps {
-  product: any;
+  product: OrderProduct;
 }
 
 export default function OrderButton({ product }: OrderButtonProps) {
@@ -43,7 +52,6 @@ export default function OrderButton({ product }: OrderButtonProps) {
         console.error('Sipariş kaydedilemedi:', error);
       }
 
-      // ✅ رسالة واتساب محسنة تتضمن حالة المنتج
       const message = `Merhaba HK BROS, web sitenizdeki aşağıdaki ürün hakkında bilgi almak ve sipariş vermek istiyorum.%0A%0A` +
         `📦 *Ürün:* ${product.name}%0A` +
         ` *Fiyat:* ₺${currentPrice}%0A` +

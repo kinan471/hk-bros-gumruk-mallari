@@ -5,11 +5,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
   Search, Eye, Loader2, Package, Clock, CheckCircle,
-  Truck, XCircle, DollarSign, Calendar, User, Phone,
+  XCircle, DollarSign, Calendar,
   MapPin, ShoppingBag, Filter
 } from 'lucide-react';
 
 type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+
+interface OrderItem {
+  product_id?: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
 
 interface Order {
   id: string;
@@ -18,7 +25,7 @@ interface Order {
   customer_email: string;
   customer_phone: string;
   customer_address: string;
-  items: any[];
+  items: OrderItem[];
   total_amount: number;
   status: OrderStatus;
   payment_status: string;
@@ -41,7 +48,7 @@ export default function AdminOrdersPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('id, order_number, customer_name, customer_email, customer_phone, customer_address, items, total_amount, status, payment_status, notes, source, created_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -155,7 +162,6 @@ export default function AdminOrdersPage() {
             </div>
             <div>
               <p className="text-xs text-gray-500">Gelir</p>
-              {/* ✅ تم إضافة 'tr-TR' هنا لمنع خطأ Hydration */}
               <p className="text-xl font-bold text-gray-900">₺{stats.revenue.toLocaleString('tr-TR')}</p>
             </div>
           </div>
@@ -238,7 +244,6 @@ export default function AdminOrdersPage() {
                       </div>
                     </td>
                     <td className="p-4">
-                      {/* ✅ تم إضافة 'tr-TR' هنا */}
                       <span className="font-bold text-gray-900">₺{(order.total_amount || 0).toLocaleString('tr-TR')}</span>
                     </td>
                     <td className="p-4">
@@ -324,13 +329,12 @@ export default function AdminOrdersPage() {
               <div>
                 <p className="text-sm text-gray-500 mb-2">Ürünler</p>
                 <div className="space-y-2">
-                  {selectedOrder.items?.map((item: any, index: number) => (
+                  {selectedOrder.items?.map((item, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
                         <p className="font-medium">{item.name}</p>
                         <p className="text-sm text-gray-500">{item.quantity} x ₺{item.price}</p>
                       </div>
-                      {/* ✅ تم إضافة 'tr-TR' هنا */}
                       <p className="font-bold">{(item.quantity * item.price).toLocaleString('tr-TR')}</p>
                     </div>
                   ))}
@@ -339,7 +343,6 @@ export default function AdminOrdersPage() {
               <div className="border-t border-gray-100 pt-4">
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-bold text-gray-900">Toplam</span>
-                  {/* ✅ تم إضافة 'tr-TR' هنا */}
                   <span className="text-2xl font-bold text-[#1E3A5F]">{(selectedOrder.total_amount || 0).toLocaleString('tr-TR')}</span>
                 </div>
               </div>

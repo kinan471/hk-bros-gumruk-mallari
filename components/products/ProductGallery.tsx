@@ -51,7 +51,7 @@ export default function ProductGallery({
           alt={`${productName} - Görsel ${activeIndex + 1}`}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
-          priority={activeIndex === 0}
+          preload={activeIndex === 0}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
           quality={85}
         />

@@ -1,27 +1,37 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import ProductCard from '@/components/products/ProductCard';
 import Link from 'next/link';
 import { Search as SearchIcon, ArrowLeft, Loader2, Tag } from 'lucide-react';
-import { Product } from '@/types/database';
+import type { ProductCardProduct } from '@/types/database';
+import { fetchReviewSummaries, type ReviewSummary } from '@/lib/utils/reviewSummaries';
+
+type SearchProduct = ProductCardProduct & {
+  short_description: string | null;
+  is_active: boolean;
+  created_at: string;
+  category_id: string | null;
+  tags: string[];
+  categories: { name: string; slug: string }[] | null;
+  reviewSummary?: ReviewSummary;
+};
 
 export default function SearchContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const query = searchParams.get('q') || '';
   const supabase = createClient();
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<SearchProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState(query);
   const [isSaleSearch, setIsSaleSearch] = useState(false);
 
   useEffect(() => {
     if (!query) {
-      setProducts([]);
-      setIsSaleSearch(false);
       return;
     }
 
@@ -32,27 +42,32 @@ export default function SearchContent() {
       try {
         const lowerQuery = query.toLowerCase().trim();
 
-        // إذا كان البحث عن "indirim" أو "تخفيض" - اعرض المنتجات المخفضة
         if (lowerQuery === 'indirim' || lowerQuery === 'sale' || lowerQuery === 'discount') {
           setIsSaleSearch(true);
           const { data, error } = await supabase
             .from('products')
-            .select('*, categories(name, slug)')
+            .select('id, name, slug, brand, regular_price, sale_price, short_description, main_image, is_active, created_at, category_id, tags, is_featured, track_inventory, stock_quantity, stock_status, product_condition, product_type, categories(name, slug)')
             .eq('is_active', true)
             .not('sale_price', 'is', null)
             .order('created_at', { ascending: false })
             .limit(50);
 
           if (error) throw error;
-          setProducts(data || []);
+          const reviewSummaries = await fetchReviewSummaries(
+            supabase,
+            data?.map((product) => product.id) ?? []
+          );
+          setProducts((data || []).map((product) => ({
+            ...product,
+            reviewSummary: reviewSummaries[product.id],
+          })));
           return;
         }
 
-        // بحث عادي
         const searchTerm = `%${query}%`;
         const { data, error } = await supabase
           .from('products')
-          .select('*, categories(name, slug)')
+          .select('id, name, slug, brand, regular_price, sale_price, short_description, main_image, is_active, created_at, category_id, tags, is_featured, track_inventory, stock_quantity, stock_status, product_condition, product_type, categories(name, slug)')
           .or(
             `name.ilike.${searchTerm},` +
             `short_description.ilike.${searchTerm},` +
@@ -65,13 +80,13 @@ export default function SearchContent() {
 
         if (error) throw error;
 
-        let filteredResults = data || [];
+        const filteredResults = data || [];
         if (query.length > 0) {
           const tagMatches = filteredResults.filter(
-            (p: any) => p.tags?.some((tag: string) => tag.toLowerCase().includes(lowerQuery))
+            (product) => product.tags?.some((tag: string) => tag.toLowerCase().includes(lowerQuery))
           );
-          const existingIds = new Set(filteredResults.map((p: any) => p.id));
-          tagMatches.forEach((p: any) => {
+          const existingIds = new Set(filteredResults.map((product) => product.id));
+          tagMatches.forEach((p) => {
             if (!existingIds.has(p.id)) {
               filteredResults.push(p);
               existingIds.add(p.id);
@@ -79,7 +94,14 @@ export default function SearchContent() {
           });
         }
 
-        setProducts(filteredResults);
+        const reviewSummaries = await fetchReviewSummaries(
+          supabase,
+          filteredResults.map((product) => product.id)
+        );
+        setProducts(filteredResults.map((product) => ({
+          ...product,
+          reviewSummary: reviewSummaries[product.id],
+        })));
       } catch (error) {
         console.error('Search error:', error);
         setProducts([]);
@@ -94,7 +116,7 @@ export default function SearchContent() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
-      window.location.href = `/search?q=${encodeURIComponent(searchInput.trim())}`;
+      router.push(`/search?q=${encodeURIComponent(searchInput.trim())}`);
     }
   };
 
@@ -144,14 +166,18 @@ export default function SearchContent() {
         ) : products.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                reviewSummary={product.reviewSummary}
+              />
             ))}
           </div>
         ) : (
           <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
             <SearchIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Sonuç Bulunamadı</h2>
-            <p className="text-gray-600 mb-6">"{query}" için herhangi bir ürün bulunamadı</p>
+            <p className="text-gray-600 mb-6">&quot;{query}&quot; için herhangi bir ürün bulunamadı</p>
             <Link
               href="/"
               className="inline-flex items-center gap-2 text-[#1E3A5F] hover:text-[#1A3354] font-medium"

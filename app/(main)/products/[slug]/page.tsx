@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Truck, Shield, RotateCcw, Star } from 'lucide-react';
@@ -9,18 +10,23 @@ import NextImage from 'next/image';
 export const dynamic = 'force-static';
 export const revalidate = 3600;
 
+const getProductBySlug = cache(async (slug: string) => {
+  const supabase = await createClient();
+  return supabase
+    .from('products')
+    .select('id, name, slug, brand, regular_price, sale_price, short_description, description, track_inventory, stock_status, stock_quantity, product_type, weight, length, width, height, sku, main_image, is_featured, is_on_sale, category_id, product_condition')
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .single();
+});
+
 interface ProductDetailPageProps {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: ProductDetailPageProps) {
   const { slug } = await params;
-  const supabase = await createClient();
-  const { data: product } = await supabase
-    .from('products')
-    .select('name, short_description')
-    .eq('slug', slug)
-    .single();
+  const { data: product } = await getProductBySlug(slug);
     
   return {
     title: product ? `${product.name} - HK BROS` : 'Ürün Bulunamadı',
@@ -32,26 +38,19 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const { slug } = await params;
   const supabase = await createClient();
 
-  // ✅ تم إضافة product_condition إلى الاستعلام
-  const { data: product, error } = await supabase
-    .from('products')
-    .select('id, name, slug, brand, regular_price, sale_price, short_description, description, track_inventory, stock_status, stock_quantity, product_type, weight, length, width, height, sku, main_image, is_featured, is_on_sale, category_id, product_condition')
-    .eq('slug', slug)
-    .eq('is_active', true)
-    .single();
+  const { data: product, error } = await getProductBySlug(slug);
 
   if (error || !product) {
     notFound();
   }
 
-  // جلب البيانات المتوازية
   const [galleryRes, relatedRes, ratingRes] = await Promise.all([
     supabase.from('product_images').select('image_url').eq('product_id', product.id).order('display_order'),
     supabase.from('products').select('id, name, slug, regular_price, sale_price, main_image, is_on_sale').eq('category_id', product.category_id).eq('is_active', true).neq('id', product.id).limit(4),
     supabase.from('reviews').select('rating').eq('product_id', product.id).eq('is_approved', true)
   ]);
 
-  const galleryImages = galleryRes.data?.map((img: any) => img.image_url) || [];
+  const galleryImages = galleryRes.data?.map((img) => img.image_url) || [];
   const relatedProducts = relatedRes.data || [];
   const ratings = ratingRes.data || [];
 
@@ -64,25 +63,22 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     ? Math.round((1 - (product.sale_price || 0) / (product.regular_price || 1)) * 100) 
     : 0;
 
-  // بناء Breadcrumb
-  let breadcrumbs: any[] = [];
+  const breadcrumbs: { id: string; name: string; slug: string; parent_id: string | null }[] = [];
   if (product.category_id) {
-    const { data: cat } = await supabase.from('categories').select('id, name, slug, parent_id').eq('id', product.category_id).single();
-    if (cat) {
-      let currentId: string | null = cat.id;
-      while (currentId) {
-        const { data: currentCat } = await supabase.from('categories').select('id, name, slug, parent_id').eq('id', currentId).single();
-        if (currentCat) {
-          breadcrumbs.unshift(currentCat);
-          currentId = currentCat.parent_id;
-        } else {
-          break;
-        }
+    const { data: allCats } = await supabase.from('categories').select('id, name, slug, parent_id');
+    const catMap = new Map(allCats?.map(c => [c.id, c]));
+    let currentId: string | null = product.category_id;
+    while (currentId) {
+      const currentCat = catMap.get(currentId);
+      if (currentCat) {
+        breadcrumbs.unshift(currentCat);
+        currentId = currentCat.parent_id;
+      } else {
+        break;
       }
     }
   }
 
-  // ✅ رسالة واتساب ديناميكية تتضمن حالة المنتج
   const currentPrice = product.sale_price || product.regular_price || 0;
   const stockText = product.track_inventory 
     ? (product.stock_quantity > 0 ? `${product.stock_quantity} adet` : 'Tükendi') 
@@ -117,7 +113,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* ✅ استخدام مكون معرض الصور التفاعلي */}
           <ProductGallery 
             mainImage={product.main_image}
             galleryImages={galleryImages}
@@ -127,7 +122,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             productCondition={product.product_condition}
           />
 
-          {/* === معلومات المنتج === */}
           <div className="space-y-6">
             <div>
               <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -188,7 +182,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               </div>
             )}
 
-            {/* ✅ زر واتساب مع رسالة ديناميكية */}
             <a 
               href={`https://wa.me/905551234567?text=${whatsappMessage}`}
               target="_blank"
@@ -245,7 +238,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               Benzer Ürünler
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {relatedProducts.map((related: any) => {
+              {relatedProducts.map((related) => {
                 const relHasDiscount = related.sale_price && related.sale_price < (related.regular_price || 0);
                 return (
                   <Link key={related.id} href={`/products/${related.slug}`} className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100 hover:-translate-y-1">

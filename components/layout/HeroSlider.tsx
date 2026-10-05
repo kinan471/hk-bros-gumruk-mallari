@@ -82,7 +82,7 @@ export default function HeroSlider() {
                 alt={slide.title}
                 fill
                 className="object-cover"
-                priority={index === 0}
+                preload={index === 0}
                 sizes="100vw"
                 quality={85}
               />

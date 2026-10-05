@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
 
 export default function Footer() {
@@ -12,7 +13,7 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                <img src="/1.jpg" alt="HK BROS" className="w-full h-full object-cover" />
+                <Image src="/logo.png" alt="HK BROS" width={48} height={48} className="w-full h-full object-contain p-1" />
               </div>
               <div>
                 <h3 className="font-bold text-white text-lg leading-tight">HK BROS</h3>

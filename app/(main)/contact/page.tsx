@@ -55,7 +55,6 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero */}
       <section className="relative bg-gradient-to-br from-[#1E3A5F] via-[#2C5282] to-[#4A90A4] text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
@@ -83,7 +82,6 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Contact Info Cards */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {contactInfo.map((info, index) => {
@@ -108,17 +106,13 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Main Content */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Contact Form */}
           <div className="lg:col-span-2">
             <ContactForm />
           </div>
 
-          {/* Sidebar Info */}
           <div className="space-y-6">
-            {/* Business Hours */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="w-5 h-5 text-[#1E3A5F]" />
@@ -138,14 +132,13 @@ export default function ContactPage() {
               </div>
             </div>
 
-            {/* Quick Contact */}
             <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white">
               <div className="flex items-center gap-2 mb-3">
                 <MessageCircle className="w-6 h-6" />
                 <h3 className="font-bold text-lg">WhatsApp Hattı</h3>
               </div>
               <p className="text-white/90 text-sm mb-4">
-                Anlık destek için WhatsApp'tan bize yazın. Genellikle 5 dakika içinde dönüş yapıyoruz.
+                Anlık destek için WhatsApp&apos;tan bize yazın. Genellikle 5 dakika içinde dönüş yapıyoruz.
               </p>
               <a
                 href="https://wa.me/905551234567"
@@ -158,7 +151,6 @@ export default function ContactPage() {
               </a>
             </div>
 
-            {/* Social Media */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h3 className="font-bold text-gray-900 mb-4">Sosyal Medya</h3>
               <div className="space-y-2">
@@ -196,7 +188,6 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Map Section */}
       <section id="map" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100">
@@ -221,7 +212,6 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* FAQ Quick */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="bg-gradient-to-br from-[#1E3A5F] to-[#4A90A4] rounded-3xl p-8 sm:p-12 text-white text-center relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">

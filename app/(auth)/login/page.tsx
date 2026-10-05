@@ -38,8 +38,8 @@ export default function LoginPage() {
 
       router.push('/admin');
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Giriş yapılırken bir hata oluştu');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Giriş yapılırken bir hata oluştu');
     } finally {
       setLoading(false);
     }

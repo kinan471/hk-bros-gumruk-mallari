@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, HelpCircle, ShieldCheck, Truck, RotateCcw, FileText } from 'lucide-react';
+import { ArrowLeft, HelpCircle, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
 
 const faqs = [
   {

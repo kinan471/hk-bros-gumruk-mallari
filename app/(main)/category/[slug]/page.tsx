@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/products/ProductCard';
 import { FolderOpen } from 'lucide-react';
+import { fetchReviewSummaries } from '@/lib/utils/reviewSummaries';
 
-// ✅ تحسين الأداء: إعادة بناء الصفحة كل 60 ثانية فقط
 export const revalidate = 60;
 
 interface CategoryPageProps {
@@ -15,23 +15,24 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  // 1. جلب الفئة الحالية
-  const { data: category } = await supabase
-    .from('categories')
-    .select('id, name, slug, description')
-    .eq('slug', slug)
-    .eq('is_active', true)
-    .single();
+  const [categoryResult, categoriesResult] = await Promise.all([
+    supabase
+      .from('categories')
+      .select('id, name, slug, description')
+      .eq('slug', slug)
+      .eq('is_active', true)
+      .single(),
+    supabase
+      .from('categories')
+      .select('id, name, slug, parent_id')
+      .eq('is_active', true),
+  ]);
 
+  const category = categoryResult.data;
   if (!category) notFound();
 
-  // 2. جلب جميع الفئات النشطة في استعلام واحد سريع جداً
-  const { data: allCategories } = await supabase
-    .from('categories')
-    .select('id, name, slug, parent_id')
-    .eq('is_active', true);
+  const allCategories = categoriesResult.data;
 
-  // 3. بناء شجرة الفئات وجمع المعرفات في الذاكرة (أسرع 100 مرة من الاستعلامات المتداخلة)
   const allCategoryIds: string[] = [category.id];
   if (allCategories) {
     const collectSubcategoryIds = (parentId: string) => {
@@ -44,19 +45,20 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     collectSubcategoryIds(category.id);
   }
 
-  // 4. جلب المنتجات من جميع الفئات (مع تحديد الأعمدة المطلوبة فقط)
   const { data: products } = await supabase
     .from('products')
-    .select('id, name, slug, regular_price, sale_price, main_image, is_on_sale, categories(name, slug)')
+    .select('id, name, slug, regular_price, sale_price, main_image, is_featured, track_inventory, stock_quantity, stock_status, product_condition, brand, product_type, categories(name, slug)')
     .in('category_id', allCategoryIds)
     .eq('is_active', true)
     .order('created_at', { ascending: false });
 
-  // 5. الفئات الفرعية المباشرة للعرض
+  const reviewSummaries = await fetchReviewSummaries(
+    supabase,
+    products?.map((product) => product.id) ?? []
+  );
   const subcategories = allCategories?.filter(c => c.parent_id === category.id) || [];
 
-  // 6. بناء Breadcrumb من الذاكرة
-  const breadcrumbs: any[] = [];
+  const breadcrumbs: NonNullable<typeof allCategories> = [];
   let currentId: string | null = category.id;
   const categoryMap = new Map(allCategories?.map(c => [c.id, c]));
 
@@ -99,7 +101,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             Alt Kategoriler
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {subcategories.map((subcat: any) => (
+            {subcategories.map((subcat) => (
               <Link key={subcat.id} href={`/category/${subcat.slug}`} className="bg-white rounded-xl p-6 border border-gray-100 hover:border-[#1E3A5F] hover:shadow-md transition-all text-center group">
                 <h3 className="font-semibold text-gray-900 text-sm group-hover:text-[#1E3A5F] transition-colors">{subcat.name}</h3>
               </Link>
@@ -110,7 +112,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
       {products && products.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-          {products.map((product: any) => <ProductCard key={product.id} product={product} />)}
+          {products.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              reviewSummary={reviewSummaries[product.id]}
+            />
+          ))}
         </div>
       ) : (
         <div className="text-center py-12 bg-white rounded-xl border border-gray-100">

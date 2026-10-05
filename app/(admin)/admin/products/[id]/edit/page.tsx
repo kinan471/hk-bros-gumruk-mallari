@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { startTransition, useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
@@ -31,7 +32,6 @@ interface ProductImage {
   display_order: number;
 }
 
-// بناء شجرة الفئات المتداخلة
 const buildCategoryTree = (categories: Category[], parentId: string | null = null): CategoryTreeNode[] => {
   return categories
     .filter(c => c.parent_id === parentId)
@@ -41,7 +41,6 @@ const buildCategoryTree = (categories: Category[], parentId: string | null = nul
     }));
 };
 
-// مكون عرض عقدة الفئة
 function CategoryTreeNodeComponent({ 
   node, 
   level, 
@@ -127,6 +126,8 @@ export default function EditProductPage() {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [deletingImage, setDeletingImage] = useState<string | null>(null);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [initializedProductId, setInitializedProductId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -149,10 +150,9 @@ export default function EditProductPage() {
     width: '',
     height: '',
     is_featured: false,
-    is_on_sale: false,
     meta_title: '',
     meta_description: '',
-    product_condition: 'Sıfır - Kapalı Kutu', // ✅ تم الإضافة
+    product_condition: 'Sıfır - Kapalı Kutu',
   });
 
   const { data: product, isLoading: loadingProduct } = useQuery({
@@ -160,7 +160,7 @@ export default function EditProductPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, slug, description, short_description, category_id, brand, tags, regular_price, sale_price, cost_price, sku, barcode, stock_quantity, track_inventory, product_type, weight, length, width, height, is_featured, is_on_sale, meta_title, meta_description, product_condition, main_image, images, is_active')
         .eq('id', productId)
         .single();
       if (error) throw error;
@@ -198,48 +198,36 @@ export default function EditProductPage() {
 
   useEffect(() => {
     if (product) {
-      setFormData({
-        name: product.name || '',
-        slug: product.slug || '',
-        description: product.description || '',
-        short_description: product.short_description || '',
-        category_id: product.category_id || '',
-        brand: product.brand || '',
-        tags: product.tags || [],
-        regular_price: product.regular_price?.toString() || '',
-        sale_price: product.sale_price?.toString() || '',
-        cost_price: product.cost_price?.toString() || '',
-        sku: product.sku || '',
-        barcode: product.barcode || '',
-        stock_quantity: product.stock_quantity?.toString() || '0',
-        track_inventory: product.track_inventory ?? true,
-        product_type: product.product_type || 'physical',
-        weight: product.weight?.toString() || '',
-        length: product.length?.toString() || '',
-        width: product.width?.toString() || '',
-        height: product.height?.toString() || '',
-        is_featured: product.is_featured || false,
-        is_on_sale: product.is_on_sale || false,
-        meta_title: product.meta_title || '',
-        meta_description: product.meta_description || '',
-        product_condition: product.product_condition || 'Sıfır - Kapalı Kutu', // ✅ تم الإضافة
+      startTransition(() => {
+        setFormData({
+          name: product.name || '',
+          slug: product.slug || '',
+          description: product.description || '',
+          short_description: product.short_description || '',
+          category_id: product.category_id || '',
+          brand: product.brand || '',
+          tags: product.tags || [],
+          regular_price: product.regular_price?.toString() || '',
+          sale_price: product.sale_price?.toString() || '',
+          cost_price: product.cost_price?.toString() || '',
+          sku: product.sku || '',
+          barcode: product.barcode || '',
+          stock_quantity: product.stock_quantity?.toString() || '0',
+          track_inventory: product.track_inventory ?? true,
+          product_type: product.product_type || 'physical',
+          weight: product.weight?.toString() || '',
+          length: product.length?.toString() || '',
+          width: product.width?.toString() || '',
+          height: product.height?.toString() || '',
+          is_featured: product.is_featured || false,
+          meta_title: product.meta_title || '',
+          meta_description: product.meta_description || '',
+          product_condition: product.product_condition || 'Sıfır - Kapalı Kutu',
+        });
+        setInitializedProductId(product.id);
       });
     }
   }, [product]);
-
-  useEffect(() => {
-    if (formData.name && product && formData.slug === product.slug) {
-      setFormData(prev => ({ ...prev, slug: generateSlug(prev.name) }));
-    }
-  }, [formData.name]);
-
-  useEffect(() => {
-    if (formData.sale_price && parseFloat(formData.sale_price) > 0) {
-      setFormData(prev => ({ ...prev, is_on_sale: true }));
-    } else {
-      setFormData(prev => ({ ...prev, is_on_sale: false }));
-    }
-  }, [formData.sale_price]);
 
   const [newImages, setNewImages] = useState<File[]>([]);
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
@@ -350,16 +338,13 @@ export default function EditProductPage() {
         width: formData.width ? parseFloat(formData.width) : null,
         height: formData.height ? parseFloat(formData.height) : null,
         is_featured: formData.is_featured,
-        is_on_sale: formData.is_on_sale,
+        is_on_sale: Number(formData.sale_price) > 0,
+        main_image: newMainImageUrl || product?.main_image || '',
         meta_title: formData.meta_title || formData.name,
         meta_description: formData.meta_description || formData.short_description,
-        product_condition: formData.product_condition, // ✅ تم الإضافة
+        product_condition: formData.product_condition,
         updated_at: new Date().toISOString(),
       };
-
-      if (newMainImageUrl) {
-        (productData as any).main_image = newMainImageUrl;
-      }
 
       const { error: productError } = await supabase
         .from('products')
@@ -385,15 +370,15 @@ export default function EditProductPage() {
 
       alert('Ürün başarıyla güncellendi!');
       router.push('/admin/products');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating product:', error);
-      alert('Ürün güncellenirken hata oluştu: ' + error.message);
+      alert('Ürün güncellenirken hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loadingProduct) {
+  if (loadingProduct || (product && initializedProductId !== product.id)) {
     return (
       <div className="p-6 sm:p-8 flex items-center justify-center min-h-screen">
         <Loader2 className="w-12 h-12 animate-spin text-[#1E3A5F]" />
@@ -455,7 +440,7 @@ export default function EditProductPage() {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value, slug: slugManuallyEdited ? prev.slug : generateSlug(e.target.value) }))}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] outline-none"
                     required
                   />
@@ -466,7 +451,7 @@ export default function EditProductPage() {
                   <input
                     type="text"
                     value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    onChange={(e) => { setSlugManuallyEdited(true); setFormData({ ...formData, slug: e.target.value }); }}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] outline-none"
                   />
                 </div>
@@ -555,7 +540,7 @@ export default function EditProductPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Ürün Tipi</label>
                     <select
                       value={formData.product_type}
-                      onChange={(e) => setFormData({ ...formData, product_type: e.target.value as any })}
+                      onChange={(e) => setFormData({ ...formData, product_type: e.target.value as typeof formData.product_type })}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] outline-none bg-white"
                     >
                       <option value="physical">Fiziksel</option>
@@ -600,7 +585,7 @@ export default function EditProductPage() {
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Ana Görsel</label>
                 <div className="aspect-square max-w-xs bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                  <img src={product.main_image} alt={product.name} className="w-full h-full object-cover" />
+                  <Image src={product.main_image} alt={product.name} fill sizes="(max-width: 640px) 100vw, 320px" className="object-cover" />
                 </div>
                 <p className="text-xs text-gray-500 mt-2">Yeni görsel yüklerseniz, ilk yüklenen görsel ana görsel olarak ayarlanır</p>
               </div>
@@ -611,7 +596,7 @@ export default function EditProductPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {galleryImages.map((img) => (
                       <div key={img.id} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group">
-                        <img src={img.image_url} alt={img.alt_text || product.name} className="w-full h-full object-cover" />
+                        <Image src={img.image_url} alt={img.alt_text || product.name} fill sizes="(max-width: 640px) 50vw, 25vw" className="object-cover" />
                         <button
                           type="button"
                           onClick={() => {
@@ -653,7 +638,7 @@ export default function EditProductPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {newImagePreviews.map((preview, index) => (
                       <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group">
-                        <img src={preview} alt={`Yeni ${index + 1}`} className="w-full h-full object-cover" />
+                        <Image src={preview} alt={`Yeni ${index + 1}`} fill unoptimized sizes="(max-width: 640px) 50vw, 25vw" className="object-cover" />
                         {index === 0 && (
                           <span className="absolute top-2 left-2 px-2 py-1 bg-[#1E3A5F] text-white text-xs font-semibold rounded">Yeni Ana Görsel</span>
                         )}

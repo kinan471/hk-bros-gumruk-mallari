@@ -27,44 +27,49 @@ export default function ReviewsList({ productId }: ReviewsListProps) {
     5: 0, 4: 0, 3: 0, 2: 0, 1: 0
   });
 
-  const fetchReviews = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('product_id', productId)
-        .eq('is_approved', true)
-        .order('created_at', { ascending: false });
+  useEffect(() => {
+    let isCurrent = true;
 
-      if (error) throw error;
+    const loadReviews = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('reviews')
+          .select('id, product_id, user_name, rating, comment, created_at')
+          .eq('product_id', productId)
+          .eq('is_approved', true)
+          .order('created_at', { ascending: false });
 
-      const reviewsList = data || [];
-      setReviews(reviewsList);
-      setTotalReviews(reviewsList.length);
+        if (error) throw error;
+        if (!isCurrent) return;
 
-      if (reviewsList.length > 0) {
-        const avg = reviewsList.reduce((sum, r) => sum + r.rating, 0) / reviewsList.length;
-        setAverageRating(Math.round(avg * 10) / 10);
+        const reviewsList = data || [];
+        setReviews(reviewsList);
+        setTotalReviews(reviewsList.length);
+        setAverageRating(
+          reviewsList.length > 0
+            ? Math.round((reviewsList.reduce((sum, review) => sum + review.rating, 0) / reviewsList.length) * 10) / 10
+            : 0
+        );
 
         const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-        reviewsList.forEach(r => {
-          if (r.rating >= 1 && r.rating <= 5) {
-            distribution[r.rating as keyof typeof distribution]++;
+        reviewsList.forEach((review) => {
+          if (review.rating >= 1 && review.rating <= 5) {
+            distribution[review.rating as keyof typeof distribution]++;
           }
         });
         setRatingDistribution(distribution);
+      } catch (error) {
+        if (isCurrent) console.error('Error fetching reviews:', error);
+      } finally {
+        if (isCurrent) setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching reviews:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  useEffect(() => {
-    fetchReviews();
-  }, [productId]);
+    void loadReviews();
+    return () => {
+      isCurrent = false;
+    };
+  }, [productId, supabase]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

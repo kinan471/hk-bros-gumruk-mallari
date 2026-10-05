@@ -29,7 +29,6 @@ export default function ContactForm() {
     try {
       const messageText = `Yeni İletişim Formu Mesajı:%0A%0AAd: ${formData.name}%0AEmail: ${formData.email}%0ATelefon: ${formData.phone}%0AKonu: ${formData.subject}%0AMesaj: ${formData.message}`;
       
-      // فتح WhatsApp مع الرسالة جاهزة
       window.open(
         `https://wa.me/905551234567?text=${messageText}`,
         '_blank'
@@ -39,7 +38,7 @@ export default function ContactForm() {
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
       
       setTimeout(() => setIsSuccess(false), 4000);
-    } catch (err) {
+    } catch {
       setError('Mesaj gönderilirken hata oluştu');
     } finally {
       setIsSubmitting(false);

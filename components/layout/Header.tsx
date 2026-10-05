@@ -1,28 +1,35 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Menu, X, User, Heart, Loader2, ChevronRight } from 'lucide-react';
+import { Search, Menu, X, User, Heart, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { Category, Product } from '@/types/database';
+import type { Product } from '@/types/database';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+
+type SearchSuggestion = Pick<
+  Product,
+  'id' | 'name' | 'slug' | 'main_image' | 'regular_price' | 'sale_price' | 'brand' | 'tags'
+> & {
+  categories: { name: string; slug: string }[] | null;
+};
 
 export default function Header() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [categories, setCategories] = useState<Category[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const [mobileSearchQuery, setMobileSearchQuery] = useState('');
-  const [mobileSearchResults, setMobileSearchResults] = useState<Product[]>([]);
+  const [mobileSearchResults, setMobileSearchResults] = useState<SearchSuggestion[]>([]);
   const [mobileIsSearching, setMobileIsSearching] = useState(false);
   const [mobileIsDropdownOpen, setMobileIsDropdownOpen] = useState(false);
 
@@ -37,27 +44,15 @@ export default function Header() {
   const mobileDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      const { data } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order');
-      if (data) setCategories(data);
-    };
-    fetchCategories();
-
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [supabase]);
+  }, []);
 
-  // إغلاق جميع القوائم والنتائج عند النقر في أي مكان خارج المكونات المعنية
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
 
-      // إغلاق بحث الديسktop
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(target) &&
@@ -67,7 +62,6 @@ export default function Header() {
         setIsDropdownOpen(false);
       }
 
-      // إغلاق بحث الموبايل
       if (
         mobileDropdownRef.current &&
         !mobileDropdownRef.current.contains(target) &&
@@ -77,7 +71,6 @@ export default function Header() {
         setMobileIsDropdownOpen(false);
       }
 
-      // إغلاق قائمة الموبايل كاملة
       if (
         mobileMenuRef.current &&
         !mobileMenuRef.current.contains(target) &&
@@ -112,7 +105,7 @@ export default function Header() {
       const searchTerm = `%${query.trim()}%`;
       const { data, error } = await supabase
         .from('products')
-        .select('*, categories(name, slug)')
+        .select('id, name, slug, main_image, regular_price, sale_price, brand, tags, categories(name, slug)')
         .or(
           `name.ilike.${searchTerm},` +
           `short_description.ilike.${searchTerm},` +
@@ -125,17 +118,17 @@ export default function Header() {
 
       if (error) throw error;
 
-      let filteredResults = data || [];
+      const filteredResults = data || [];
       if (query.trim().length > 0) {
         const lowerQuery = query.toLowerCase();
         const tagMatches = filteredResults.filter(
-          (p: any) => p.tags?.some((tag: string) => tag.toLowerCase().includes(lowerQuery))
+          (product) => product.tags?.some((tag: string) => tag.toLowerCase().includes(lowerQuery))
         );
-        const existingIds = new Set(filteredResults.map((p: any) => p.id));
-        tagMatches.forEach((p: any) => {
-          if (!existingIds.has(p.id)) {
-            filteredResults.push(p);
-            existingIds.add(p.id);
+        const existingIds = new Set(filteredResults.map((product) => product.id));
+        tagMatches.forEach((product) => {
+          if (!existingIds.has(product.id)) {
+            filteredResults.push(product);
+            existingIds.add(product.id);
           }
         });
       }
@@ -251,7 +244,7 @@ export default function Header() {
     }
   };
 
-  const ProductResultItem = ({ product, index, isMobile = false }: { product: Product; index: number; isMobile?: boolean }) => (
+  const ProductResultItem = ({ product, index, isMobile = false }: { product: SearchSuggestion; index: number; isMobile?: boolean }) => (
     <Link
       href={`/products/${product.slug}`}
       onClick={() => {
@@ -269,7 +262,7 @@ export default function Header() {
     >
       <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
         {product.main_image ? (
-          <img src={product.main_image} alt={product.name} className="w-full h-full object-cover" />
+          <Image src={product.main_image} alt={product.name} width={56} height={56} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Search className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
@@ -282,8 +275,8 @@ export default function Header() {
           {highlightMatch(product.name, isMobile ? mobileSearchQuery : searchQuery)}
         </h4>
         <div className="flex items-center gap-2 mt-1">
-          {product.categories?.name && (
-            <span className="text-[10px] sm:text-xs text-gray-500">{product.categories.name}</span>
+          {product.categories?.[0]?.name && (
+            <span className="text-[10px] sm:text-xs text-gray-500">{product.categories[0].name}</span>
           )}
           {product.brand && (
             <>
@@ -309,25 +302,25 @@ export default function Header() {
     </Link>
   );
 
-  const parentCategories = categories.filter(cat => !cat.parent_id);
-
   return (
-    <header className={`sticky top-0 z-50 transition-all duration-300 ${
-      isScrolled ? 'bg-white shadow-md' : 'bg-white/95 backdrop-blur-sm'
+    <header className={`sticky top-0 z-50 border-b border-[#1E3A5F]/10 transition-all duration-300 ${
+      isScrolled ? 'bg-white shadow-lg shadow-[#1E3A5F]/5' : 'bg-white/95 backdrop-blur-sm'
     }`}>
+      <div className="h-1 bg-gradient-to-r from-[#1E3A5F] via-[#4A90A4] to-[#E8B04B]" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4">
+        <div className="flex items-center justify-between h-[76px] sm:h-20 gap-4">
           
-          <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
-            <div className="relative w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center overflow-hidden group-hover:shadow-lg transition-all duration-300">
-              <img src="/1.jpg" alt="HK BROS" className="w-full h-full object-contain p-1" />
+          <Link href="/" className="flex items-center gap-3 group flex-shrink-0" aria-label="HK BROS ana sayfa">
+            <div className="relative w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl ring-1 ring-[#E8B04B]/60 shadow-sm flex items-center justify-center overflow-hidden group-hover:shadow-md group-hover:ring-[#E8B04B] transition-all duration-300">
+              <Image src="/logo.png" alt="HK BROS" width={48} height={48} className="w-full h-full object-contain p-1" />
             </div>
-            <div className="flex items-center h-8">
-              <img src="/2.jpg" alt="HK BROS Brand" className="h-full w-auto object-contain" />
+            <div className="leading-tight">
+              <span className="block font-extrabold tracking-wide text-[#1E3A5F]">HK BROS</span>
+              <span className="block text-[9px] sm:text-[10px] font-semibold tracking-[0.16em] text-[#4A90A4]">GÜMRÜK MALLARI</span>
             </div>
           </Link>
 
-          <div className="hidden md:flex flex-1 max-w-xl relative">
+          <div className="hidden md:flex flex-1 max-w-2xl relative">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <input
                 ref={searchInputRef}
@@ -337,13 +330,13 @@ export default function Header() {
                 onChange={handleSearchChange}
                 onKeyDown={handleKeyDown}
                 onFocus={() => searchResults.length > 0 && setIsDropdownOpen(true)}
-                className="w-full px-5 py-2.5 pr-12 rounded-full border-2 border-gray-200 focus:border-[#1E3A5F] focus:outline-none transition-all bg-gray-50 focus:bg-white text-sm"
+                className="w-full px-5 py-3 pr-12 rounded-full border border-gray-200 focus:border-[#4A90A4] focus:outline-none focus:ring-4 focus:ring-[#4A90A4]/10 transition-all bg-[#F8FAFC] focus:bg-white text-sm"
                 autoComplete="off"
               />
               <button
                 type="submit"
                 aria-label="Arama Yap"
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#1E3A5F] transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-[#1E3A5F] text-white hover:bg-[#4A90A4] transition-colors"
               >
                 {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               </button>
@@ -363,7 +356,7 @@ export default function Header() {
                   <div className="py-8 px-6 text-center">
                     <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-gray-600 font-medium mb-1">Sonuç Bulunamadı</p>
-                    <p className="text-sm text-gray-500">"{searchQuery}" için ürün bulunamadı</p>
+                    <p className="text-sm text-gray-500">&quot;{searchQuery}&quot; için ürün bulunamadı</p>
                     <Link
                       href={`/search?q=${encodeURIComponent(searchQuery)}`}
                       className="inline-block mt-3 text-sm text-[#1E3A5F] hover:underline"
@@ -396,67 +389,27 @@ export default function Header() {
             )}
           </div>
 
-          <div className="hidden md:flex items-center gap-3 flex-shrink-0">
-            <button aria-label="Favoriler" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <Heart className="w-5 h-5 text-gray-600" />
+          <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+            <button aria-label="Favoriler" className="p-2.5 rounded-full border border-gray-100 hover:border-[#E8B04B]/50 hover:bg-[#E8B04B]/10 transition-colors">
+              <Heart className="w-5 h-5 text-[#1E3A5F]" />
             </button>
-            <button aria-label="Hesabım" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-              <User className="w-5 h-5 text-gray-600" />
+            <button aria-label="Hesabım" className="p-2.5 rounded-full border border-gray-100 hover:border-[#E8B04B]/50 hover:bg-[#E8B04B]/10 transition-colors">
+              <User className="w-5 h-5 text-[#1E3A5F]" />
             </button>
           </div>
 
           <button
             ref={menuButtonRef}
             aria-label="Menü"
-            className="md:hidden p-2"
+            className="md:hidden p-2.5 rounded-xl border border-[#1E3A5F]/10 text-[#1E3A5F] hover:bg-[#1E3A5F]/5 transition-colors"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
 
-        {/* شريط التصنيفات (تم حذف Ana Sayfa) */}
-        <nav className="hidden md:block border-t border-gray-100 py-3">
-          <ul className="flex items-center justify-center gap-6 lg:gap-8">
-            {parentCategories.map((category) => {
-              const hasChildren = categories.some(c => c.parent_id === category.id);
-              return (
-                <li key={category.id} className="relative group">
-                  <Link
-                    href={`/category/${category.slug}`}
-                    className="text-sm font-medium text-gray-600 hover:text-[#1E3A5F] transition-colors flex items-center gap-1 py-1"
-                  >
-                    {category.name}
-                    {hasChildren && (
-                      <ChevronRight className="w-3 h-3 transition-transform group-hover:rotate-90" />
-                    )}
-                  </Link>
-
-                  {hasChildren && (
-                    <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                      <div className="py-2">
-                        {categories
-                          .filter(c => c.parent_id === category.id)
-                          .map(subcat => (
-                            <Link
-                              key={subcat.id}
-                              href={`/category/${subcat.slug}`}
-                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#1E3A5F] transition-colors"
-                            >
-                              {subcat.name}
-                            </Link>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
       </div>
 
-      {/* قائمة الموبايل (تم حذف Ana Sayfa) */}
       {isMenuOpen && (
         <div ref={mobileMenuRef} className="md:hidden bg-white border-t border-gray-100">
           <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
@@ -525,42 +478,6 @@ export default function Header() {
               )}
             </div>
 
-            <nav>
-              <ul className="space-y-1">
-                {parentCategories.map((category) => {
-                  const hasChildren = categories.some(c => c.parent_id === category.id);
-                  const subcategories = categories.filter(c => c.parent_id === category.id);
-                  
-                  return (
-                    <li key={category.id}>
-                      <Link
-                        href={`/category/${category.slug}`}
-                        className="block py-2 px-3 text-gray-600 hover:text-[#1E3A5F] hover:bg-gray-50 rounded-lg transition-colors font-medium"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        {category.name}
-                      </Link>
-                      
-                      {hasChildren && (
-                        <ul className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-3">
-                          {subcategories.map(subcat => (
-                            <li key={subcat.id}>
-                              <Link
-                                href={`/category/${subcat.slug}`}
-                                className="block py-1.5 px-2 text-sm text-gray-500 hover:text-[#1E3A5F] hover:bg-gray-50 rounded transition-colors"
-                                onClick={() => setIsMenuOpen(false)}
-                              >
-                                {subcat.name}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
           </div>
         </div>
       )}

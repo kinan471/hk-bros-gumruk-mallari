@@ -4,13 +4,23 @@ import { createClient } from '@/lib/supabase/client';
 import ProductCard from '@/components/products/ProductCard';
 import Link from 'next/link';
 import { Filter, SlidersHorizontal, Search, Loader2, X, ArrowUpDown, TrendingUp, Package } from 'lucide-react';
-import { Product, Category } from '@/types/database';
+import type { Category, ProductCardProduct } from '@/types/database';
+import { fetchReviewSummaries, type ReviewSummary } from '@/lib/utils/reviewSummaries';
 
 type SortOption = 'newest' | 'price_low' | 'price_high' | 'rating';
+type ProductListItem = ProductCardProduct & {
+  short_description: string | null;
+  is_active: boolean;
+  created_at: string;
+  category_id: string | null;
+  views_count: number;
+  categories: { name: string; slug: string }[] | null;
+  reviewSummary?: ReviewSummary;
+};
 
 export default function AllProductsPage() {
   const supabase = createClient();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductListItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -25,12 +35,21 @@ export default function AllProductsPage() {
       setLoading(true);
       try {
         const [productsRes, categoriesRes] = await Promise.all([
-          // ✅ تم الإصلاح: إضافة '*' قبل الفاصلة لجلب جميع بيانات المنتج
-          supabase.from('products').select('*, categories(name, slug)').eq('is_active', true).order('created_at', { ascending: false }),
-          supabase.from('categories').select('*').eq('is_active', true).eq('parent_id', null).order('display_order')
+          supabase.from('products').select('id, name, slug, brand, regular_price, sale_price, short_description, main_image, is_active, created_at, category_id, views_count, is_featured, track_inventory, stock_quantity, stock_status, product_condition, product_type, categories(name, slug)').eq('is_active', true).order('created_at', { ascending: false }),
+          supabase.from('categories').select('*').eq('is_active', true).is('parent_id', null).order('display_order')
         ]);
 
-        if (productsRes.data) setProducts(productsRes.data);
+        if (productsRes.data) {
+          setProducts(productsRes.data);
+          const reviewSummaries = await fetchReviewSummaries(
+            supabase,
+            productsRes.data.map((product) => product.id)
+          );
+          setProducts(productsRes.data.map((product) => ({
+            ...product,
+            reviewSummary: reviewSummaries[product.id],
+          })));
+        }
         if (categoriesRes.data) setCategories(categoriesRes.data);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -89,7 +108,6 @@ export default function AllProductsPage() {
             </div>
             <div>
               <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Tüm Ürünler</h1>
-              {/* ✅ إخفاء الرقم أثناء التحميل لتجنب إظهار "0" بشكل خاطئ */}
               <p className="text-gray-500 mt-1">
                 {loading ? 'Ürünler yükleniyor...' : `${filteredProducts.length} ürün listeleniyor`}
               </p>
@@ -154,7 +172,13 @@ export default function AllProductsPage() {
               </div>
             ) : filteredProducts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-                {filteredProducts.map((product) => <ProductCard key={product.id} product={product} />)}
+                {filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    reviewSummary={product.reviewSummary}
+                  />
+                ))}
               </div>
             ) : (
               <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">

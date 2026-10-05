@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server';
+import Image from 'next/image';
 import ProductCard from '@/components/products/ProductCard';
 import HeroSlider from '@/components/layout/HeroSlider';
+import { fetchReviewSummaries } from '@/lib/utils/reviewSummaries';
 import Link from 'next/link';
-import { ChevronRight, Star, Zap, TrendingUp } from 'lucide-react';
+import { ChevronRight, Star, TrendingUp } from 'lucide-react';
 
-// ✅ إجبار Next.js على بناء الصفحة بشكل ثابت (Static) وتحديثها كل ساعة (3600 ثانية)
-// هذا هو السحر الحقيقي للأداء في Next.js App Router
 export const dynamic = 'force-static';
 export const revalidate = 120;
 
@@ -17,35 +17,43 @@ export const metadata = {
 export default async function HomePage() {
   const supabase = await createClient();
 
-  // ✅ استعلامات نظيفة وبسيطة. Next.js سيخزن نتائجها تلقائياً بسبب revalidate
-  const { data: featuredProducts } = await supabase
-    .from('products')
-    .select('*, categories(name, slug)')
-    .eq('is_featured', true)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(8);
+  const productFields = 'id, name, slug, main_image, regular_price, sale_price, is_featured, track_inventory, stock_quantity, stock_status, product_condition, brand, product_type, created_at';
+  const [featuredResult, latestResult, categoriesResult] = await Promise.all([
+    supabase
+      .from('products')
+      .select(productFields)
+      .eq('is_featured', true)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(8),
+    supabase
+      .from('products')
+      .select(productFields)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(8),
+    supabase
+      .from('categories')
+      .select('id, name, slug, image_url')
+      .eq('is_active', true)
+      .is('parent_id', null)
+      .order('display_order')
+      .limit(6),
+  ]);
 
-  const { data: latestProducts } = await supabase
-    .from('products')
-    .select('*, categories(name, slug)')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(8);
-
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name, slug')
-    .eq('is_active', true)
-    .eq('parent_id', null)
-    .order('display_order')
-    .limit(6);
+  const featuredProducts = featuredResult.data ?? [];
+  const latestProducts = latestResult.data ?? [];
+  const categories = categoriesResult.data ?? [];
+  const reviewSummaries = await fetchReviewSummaries(supabase, [
+    ...featuredProducts.map((product) => product.id),
+    ...latestProducts.map((product) => product.id),
+  ]);
 
   return (
     <div className="min-h-screen">
       <HeroSlider />
       
-      {categories && categories.length > 0 && (
+      {categories.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -58,10 +66,28 @@ export default async function HomePage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {categories.map((category) => (
-              <Link key={category.id} href={`/category/${category.slug}`} className="group relative aspect-square bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute inset-0 flex items-end p-4">
-                  <h3 className="font-bold text-white text-sm sm:text-base group-hover:text-[#E8B04B] transition-colors">{category.name}</h3>
+              <Link
+                key={category.id}
+                href={`/category/${category.slug}`}
+                className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-[#1E3A5F] to-[#4A90A4] shadow-sm hover:shadow-xl transition-all duration-300"
+              >
+                {category.image_url && (
+                  <Image
+                    src={category.image_url}
+                    alt=""
+                    fill
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#0F172A]/15 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                  <h3 className="font-bold text-white text-sm sm:text-base drop-shadow-sm group-hover:text-[#F5C06B] transition-colors">
+                    {category.name}
+                  </h3>
+                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-white/80 group-hover:text-white transition-colors">
+                    Ürünleri keşfet <ChevronRight className="w-3.5 h-3.5" />
+                  </span>
                 </div>
               </Link>
             ))}
@@ -69,7 +95,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {featuredProducts && featuredProducts.length > 0 && (
+      {featuredProducts.length > 0 && (
         <section className="bg-gradient-to-b from-gray-50 to-white py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 mb-8">
@@ -83,14 +109,14 @@ export default async function HomePage() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product.id} product={product} reviewSummary={reviewSummaries[product.id]} />
               ))}
             </div>
           </div>
         </section>
       )}
 
-      {latestProducts && latestProducts.length > 0 && (
+      {latestProducts.length > 0 && (
         <section className="bg-gradient-to-b from-white to-gray-50 py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-8">
@@ -103,19 +129,11 @@ export default async function HomePage() {
                   <p className="text-gray-500 mt-1">En son eklenen ürünler</p>
                 </div>
               </div>
-              <Link href="/products" className="hidden sm:inline-flex items-center gap-2 bg-[#1E3A5F] text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-[#1A3354] transition-all hover:scale-105 shadow-md">
-                Tüm Ürünleri Gör <ChevronRight className="w-4 h-4" />
-              </Link>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {latestProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product.id} product={product} reviewSummary={reviewSummaries[product.id]} />
               ))}
-            </div>
-            <div className="sm:hidden mt-6 text-center">
-              <Link href="/products" className="inline-flex items-center gap-2 bg-[#1E3A5F] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#1A3354] transition-all shadow-md">
-                Tüm Ürünleri Gör <ChevronRight className="w-4 h-4" />
-              </Link>
             </div>
           </div>
         </section>

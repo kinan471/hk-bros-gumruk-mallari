@@ -1,10 +1,36 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { 
-  Package, ShoppingCart, DollarSign, AlertTriangle,
+  Package, ShoppingCart, AlertTriangle,
   TrendingUp, Eye, Clock, ArrowUpRight,
   Plus, MoreVertical
 } from 'lucide-react';
+
+type RecentProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  regular_price: number | null;
+  sale_price: number | null;
+  stock_quantity: number;
+  track_inventory: boolean;
+  created_at: string;
+  categories: { name: string }[] | null;
+};
+
+type TopProduct = Pick<RecentProduct, 'id' | 'name' | 'slug' | 'regular_price' | 'sale_price'> & {
+  views_count: number;
+  main_image: string;
+};
+
+type RecentOrder = {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  total_amount: number;
+  status: string;
+  created_at: string;
+};
 
 export const metadata = {
   title: 'Kontrol Paneli - HK BROS Admin',
@@ -13,47 +39,26 @@ export const metadata = {
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const { count: totalProducts } = await supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_active', true);
-
-  const { count: totalCategories } = await supabase
-    .from('categories')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_active', true);
-
-  const { count: lowStockProducts } = await supabase
-    .from('products')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_active', true)
-    .eq('track_inventory', true)
-    .lte('stock_quantity', 5)
-    .gt('stock_quantity', 0);
-
-  const { count: totalOrders } = await supabase
-    .from('orders')
-    .select('*', { count: 'exact', head: true });
-
-  const { data: recentProducts } = await supabase
-    .from('products')
-    .select('id, name, slug, regular_price, sale_price, stock_quantity, track_inventory, created_at, categories(name)')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(5);
-
-  const { data: topProducts } = await supabase
-    .from('products')
-    .select('id, name, slug, regular_price, sale_price, views_count, main_image')
-    .eq('is_active', true)
-    .order('views_count', { ascending: false })
-    .limit(5);
-
-  const { data: recentOrders } = await supabase
-    .from('orders')
-    .select('id, order_number, customer_name, total_amount, status, created_at')
-    .order('created_at', { ascending: false })
-    .limit(5);
+  const [
+    { count: totalProducts },
+    { count: totalCategories },
+    { count: lowStockProducts },
+    { count: totalOrders },
+    { data: recentProductsData },
+    { data: topProductsData },
+    { data: recentOrdersData }
+  ] = await Promise.all([
+    supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
+    supabase.from('categories').select('*', { count: 'exact', head: true }).eq('is_active', true),
+    supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('track_inventory', true).lte('stock_quantity', 5).gt('stock_quantity', 0),
+    supabase.from('orders').select('*', { count: 'exact', head: true }),
+    supabase.from('products').select('id, name, slug, regular_price, sale_price, stock_quantity, track_inventory, created_at, categories(name)').eq('is_active', true).order('created_at', { ascending: false }).limit(5),
+    supabase.from('products').select('id, name, slug, regular_price, sale_price, views_count, main_image').eq('is_active', true).order('views_count', { ascending: false }).limit(5),
+    supabase.from('orders').select('id, order_number, customer_name, total_amount, status, created_at').order('created_at', { ascending: false }).limit(5)
+  ]);
+  const recentProducts = (recentProductsData ?? []) as RecentProduct[];
+  const topProducts = (topProductsData ?? []) as TopProduct[];
+  const recentOrders = (recentOrdersData ?? []) as RecentOrder[];
 
   const stats = [
     {
@@ -153,13 +158,13 @@ export default async function AdminDashboard() {
           </div>
           <div className="divide-y divide-gray-100">
             {recentProducts && recentProducts.length > 0 ? (
-              recentProducts.map((product: any) => (
+              recentProducts.map((product) => (
                 <div key={product.id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 truncate">{product.name}</h3>
                       <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-                        <span>{product.categories?.name || 'Kategori yok'}</span>
+                        <span>{product.categories?.[0]?.name || 'Kategori yok'}</span>
                         <span>•</span>
                         <span className="font-medium text-[#1E3A5F]">
                           ₺{product.sale_price || product.regular_price || 0}
@@ -241,7 +246,7 @@ export default async function AdminDashboard() {
           <div className="p-6">
             {topProducts && topProducts.length > 0 ? (
               <div className="space-y-4">
-                {topProducts.map((product: any, index) => (
+                {topProducts.map((product, index) => (
                   <div key={product.id} className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-gradient-to-br from-[#1E3A5F] to-[#4A90A4] rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                       #{index + 1}
@@ -286,7 +291,7 @@ export default async function AdminDashboard() {
           </div>
           <div className="divide-y divide-gray-100">
             {recentOrders && recentOrders.length > 0 ? (
-              recentOrders.map((order: any) => (
+              recentOrders.map((order) => (
                 <div key={order.id} className="p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">

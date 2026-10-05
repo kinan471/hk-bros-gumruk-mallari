@@ -20,7 +20,6 @@ export default function AboutPage() {
           </div>
 
           <div className="p-8 sm:p-12 space-y-12">
-            {/* Hikayemiz */}
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Hikayemiz ve Misyonumuz</h2>
               <p className="text-gray-600 leading-relaxed mb-4">
@@ -31,7 +30,6 @@ export default function AboutPage() {
               </p>
             </div>
 
-            {/* Neden Biz */}
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Neden HK BROS?</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -53,7 +51,6 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* İletişim ve Çalışma Saatleri */}
             <div className="bg-[#1E3A5F] text-white rounded-2xl p-8">
               <h2 className="text-2xl font-bold mb-6">İletişim ve Çalışma Saatlerimiz</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

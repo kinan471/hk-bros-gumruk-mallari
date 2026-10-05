@@ -58,8 +58,8 @@ export default function ReviewForm({ productId, onSuccess }: ReviewFormProps) {
         setIsSuccess(false);
         onSuccess();
       }, 2000);
-    } catch (err: any) {
-      console.error('Review error:', err);
+    } catch (error: unknown) {
+      console.error('Review error:', error);
       setError('Yorum gönderilirken hata oluştu');
     } finally {
       setIsSubmitting(false);

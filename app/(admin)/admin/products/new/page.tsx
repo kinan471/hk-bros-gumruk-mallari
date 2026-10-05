@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { generateSlug } from '@/lib/utils/slug';
@@ -84,6 +85,7 @@ export default function NewProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '', slug: '', description: '', short_description: '', category_id: '',
@@ -91,8 +93,8 @@ export default function NewProductPage() {
     sku: '', barcode: '', stock_quantity: '0', track_inventory: true,
     product_type: 'physical' as 'physical' | 'digital' | 'service',
     weight: '', length: '', width: '', height: '',
-    is_featured: false, is_on_sale: false, meta_title: '', meta_description: '',
-    product_condition: 'Sıfır - Kapalı Kutu', // ✅ تم الإضافة
+    is_featured: false, meta_title: '', meta_description: '',
+    product_condition: 'Sıfır - Kapalı Kutu',
   });
 
   const [images, setImages] = useState<File[]>([]);
@@ -106,20 +108,6 @@ export default function NewProductPage() {
     };
     fetchCategories();
   }, [supabase]);
-
-  useEffect(() => {
-    if (formData.name && !formData.slug) {
-      setFormData(prev => ({ ...prev, slug: generateSlug(prev.name) }));
-    }
-  }, [formData.name]);
-
-  useEffect(() => {
-    if (formData.sale_price && parseFloat(formData.sale_price) > 0) {
-      setFormData(prev => ({ ...prev, is_on_sale: true }));
-    } else {
-      setFormData(prev => ({ ...prev, is_on_sale: false, sale_price: '' }));
-    }
-  }, [formData.sale_price]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -203,13 +191,13 @@ export default function NewProductPage() {
         height: formData.height ? parseFloat(formData.height) : null,
         main_image: mainImageUrl || 'https://via.placeholder.com/400',
         is_featured: formData.is_featured,
-        is_on_sale: formData.is_on_sale,
+        is_on_sale: Number(formData.sale_price) > 0,
         is_active: true,
         status: 'published',
         views_count: 0,
         meta_title: formData.meta_title || formData.name,
         meta_description: formData.meta_description || formData.short_description,
-        product_condition: formData.product_condition, // ✅ تم الإضافة
+        product_condition: formData.product_condition,
       };
 
       const { data: product, error: productError } = await supabase.from('products').insert([productData]).select().single();
@@ -225,9 +213,9 @@ export default function NewProductPage() {
 
       alert('Ürün başarıyla eklendi!');
       router.push('/admin/products');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving product:', error);
-      alert('Ürün kaydedilirken hata oluştu: ' + error.message);
+      alert('Ürün kaydedilirken hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
     } finally {
       setIsSubmitting(false);
     }
@@ -258,11 +246,11 @@ export default function NewProductPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Ürün Adı *</label>
-                  <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] outline-none" placeholder="Ürün adını girin" required />
+                  <input type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value, slug: slugManuallyEdited ? prev.slug : generateSlug(e.target.value) }))} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] outline-none" placeholder="Ürün adını girin" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Slug (Ürün Bağlantısı)</label>
-                  <input type="text" value={formData.slug} onChange={(e) => setFormData({ ...formData, slug: e.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] outline-none" placeholder="urun-url-slug" />
+                  <input type="text" value={formData.slug} onChange={(e) => { setSlugManuallyEdited(true); setFormData({ ...formData, slug: e.target.value }); }} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] outline-none" placeholder="urun-url-slug" />
                   <p className="text-xs text-gray-500 mt-1">Ürün bağlantısında kullanılır, addan otomatik oluşturulur</p>
                 </div>
                 <div>
@@ -306,7 +294,7 @@ export default function NewProductPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Ürün Tipi</label>
-                    <select value={formData.product_type} onChange={(e) => setFormData({ ...formData, product_type: e.target.value as any })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] outline-none bg-white">
+                    <select value={formData.product_type} onChange={(e) => setFormData({ ...formData, product_type: e.target.value as typeof formData.product_type })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] outline-none bg-white">
                       <option value="physical">Fiziksel</option>
                       <option value="digital">Dijital</option>
                       <option value="service">Hizmet</option>
@@ -352,7 +340,7 @@ export default function NewProductPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {imagePreviews.map((preview, index) => (
                       <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group">
-                        <img src={preview} alt={`Önizleme ${index + 1}`} className="w-full h-full object-cover" />
+                        <Image src={preview} alt={`Önizleme ${index + 1}`} fill unoptimized sizes="(max-width: 640px) 50vw, 25vw" className="object-cover" />
                         {index === 0 && <span className="absolute top-2 left-2 px-2 py-1 bg-[#1E3A5F] text-white text-xs font-semibold rounded">Ana Görsel</span>}
                         <button type="button" onClick={() => removeImage(index)} className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                           <X className="w-3 h-3" />

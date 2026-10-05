@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { Product, Category } from '@/types/database';
+import Image from 'next/image';
 import {
   Plus, Search, Grid3x3, List, Edit, Trash2,
   Eye, EyeOff, Package, AlertTriangle,
@@ -14,6 +15,26 @@ import Link from 'next/link';
 type ViewMode = 'grid' | 'list';
 type StatusFilter = 'all' | 'published' | 'draft';
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
+type AdminProduct = Pick<
+  Product,
+  | 'id'
+  | 'name'
+  | 'slug'
+  | 'main_image'
+  | 'status'
+  | 'is_active'
+  | 'stock_quantity'
+  | 'stock_status'
+  | 'sale_price'
+  | 'regular_price'
+  | 'created_at'
+  | 'category_id'
+  | 'sku'
+  | 'brand'
+  | 'product_condition'
+> & {
+  categories: { name: string; slug: string }[] | null;
+};
 
 export default function AdminProductsPage() {
   const queryClient = useQueryClient();
@@ -31,19 +52,19 @@ export default function AdminProductsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('*, categories(name, slug)')
+        .select('id, name, slug, main_image, status, is_active, stock_quantity, stock_status, sale_price, regular_price, created_at, category_id, sku, brand, product_condition, categories(name, slug)')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as Product[];
+      return data as AdminProduct[];
     },
   });
 
   const { data: categories } = useQuery({
     queryKey: ['admin-categories'],
-    queryFn: async () => {
+    queryFn: async (): Promise<Category[]> => {
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
+        .select('id, name, slug, description, parent_id, image_url, display_order, is_active, created_at, updated_at')
         .eq('is_active', true)
         .order('display_order');
       if (error) throw error;
@@ -82,8 +103,8 @@ export default function AdminProductsPage() {
       const query = searchQuery.toLowerCase();
       result = result.filter(p =>
         p.name.toLowerCase().includes(query) ||
-        (p as any).sku?.toLowerCase().includes(query) ||
-        (p as any).brand?.toLowerCase().includes(query)
+        p.sku?.toLowerCase().includes(query) ||
+        p.brand?.toLowerCase().includes(query)
       );
     }
 
@@ -300,10 +321,12 @@ export default function AdminProductsPage() {
               className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all overflow-hidden"
             >
               <div className="relative aspect-square bg-gray-100">
-                <img
+                <Image
                   src={product.main_image}
                   alt={product.name}
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 33vw"
+                  className="object-cover"
                 />
                 <div className="absolute top-2 left-2 flex flex-col gap-1">
                   {product.status === 'published' && (
@@ -323,10 +346,9 @@ export default function AdminProductsPage() {
               <div className="p-4">
                 <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-2">{product.name}</h3>
                 
-                {/* ✅ عرض حالة المنتج في شبكة المنتجات */}
-                {(product as any).product_condition && (
+                {product.product_condition && (
                   <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-semibold rounded-full mb-2">
-                    {(product as any).product_condition}
+                    {product.product_condition}
                   </span>
                 )}
 
@@ -387,24 +409,25 @@ export default function AdminProductsPage() {
                   <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <img
+                        <Image
                           src={product.main_image}
                           alt={product.name}
+                          width={48}
+                          height={48}
                           className="w-12 h-12 rounded-lg object-cover"
                         />
                         <div>
                           <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
-                          <p className="text-xs text-gray-500">{(product as any).sku || 'SKU yok'}</p>
-                          {/* ✅ عرض حالة المنتج في جدول المنتجات */}
-                          {(product as any).product_condition && (
+                          <p className="text-xs text-gray-500">{product.sku || 'SKU yok'}</p>
+                          {product.product_condition && (
                             <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-semibold rounded-full mt-1">
-                              {(product as any).product_condition}
+                              {product.product_condition}
                             </span>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 text-sm text-gray-600">{product.categories?.name || '-'}</td>
+                    <td className="p-4 text-sm text-gray-600">{product.categories?.[0]?.name || '-'}</td>
                     <td className="p-4">
                       <div>
                         <p className="font-bold text-[#1E3A5F]">₺{product.sale_price || product.regular_price || 0}</p>
