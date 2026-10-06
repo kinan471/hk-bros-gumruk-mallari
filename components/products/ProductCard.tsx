@@ -69,12 +69,7 @@ export default function ProductCard({ product, reviewSummary }: ProductCardProps
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-          {product.is_featured && (
-            <span className="flex items-center gap-1 bg-gradient-to-r from-[#E8B04B] to-[#F5C06B] text-white text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-full shadow-lg">
-              <Star className="w-3 h-3 fill-current" />
-              Öne Çıkan
-            </span>
-          )}
+          {product.is_featured}
           {hasDiscount && (
             <span className="flex items-center gap-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-full shadow-lg animate-pulse">
               <Flame className="w-3 h-3" />
