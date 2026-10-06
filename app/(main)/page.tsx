@@ -64,28 +64,28 @@ export default async function HomePage() {
               Tümünü Gör <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 justify-items-start gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
             {categories.map((category) => (
               <Link
                 key={category.id}
                 href={`/category/${category.slug}`}
-                className="group relative aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-[#1E3A5F] to-[#4A90A4] shadow-sm hover:shadow-xl transition-all duration-300"
+                className="group relative aspect-[4/3] w-full max-w-[130px] overflow-hidden rounded-xl bg-gradient-to-br from-[#1E3A5F] to-[#4A90A4] shadow-sm transition-all duration-300 hover:shadow-xl sm:max-w-[180px] sm:rounded-2xl md:max-w-none"
               >
                 {category.image_url && (
                   <Image
                     src={category.image_url}
                     alt=""
                     fill
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+                    sizes="(max-width: 640px) 130px, (max-width: 768px) 180px, (max-width: 1024px) 33vw, 16vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#0F172A]/15 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-                  <h3 className="font-bold text-white text-sm sm:text-base drop-shadow-sm group-hover:text-[#F5C06B] transition-colors">
+                <div className="absolute inset-x-0 bottom-0 p-2 sm:p-4">
+                  <h3 className="font-bold text-white text-[11px] sm:text-sm lg:text-base drop-shadow-sm group-hover:text-[#F5C06B] transition-colors">
                     {category.name}
                   </h3>
-                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-white/80 group-hover:text-white transition-colors">
+                  <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-semibold text-white/80 transition-colors group-hover:text-white sm:mt-2 sm:text-xs">
                     Ürünleri keşfet <ChevronRight className="w-3.5 h-3.5" />
                   </span>
                 </div>

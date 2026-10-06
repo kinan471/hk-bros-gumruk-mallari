@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: {
@@ -34,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body className="antialiased bg-gray-50">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
