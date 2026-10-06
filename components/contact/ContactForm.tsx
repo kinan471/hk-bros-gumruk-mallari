@@ -30,7 +30,7 @@ export default function ContactForm() {
       const messageText = `Yeni İletişim Formu Mesajı:%0A%0AAd: ${formData.name}%0AEmail: ${formData.email}%0ATelefon: ${formData.phone}%0AKonu: ${formData.subject}%0AMesaj: ${formData.message}`;
       
       window.open(
-        `https://wa.me/905551234567?text=${messageText}`,
+        `https://wa.me/905314319921?text=${messageText}`,
         '_blank'
       );
 
@@ -100,7 +100,7 @@ export default function ContactForm() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/10 outline-none transition-all"
-                placeholder="+90 555 123 45 67"
+                placeholder="+90 531 431 99 21"
               />
             </div>
             <div>

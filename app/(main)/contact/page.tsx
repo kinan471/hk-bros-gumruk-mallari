@@ -15,8 +15,8 @@ export default function ContactPage() {
     {
       icon: Phone,
       title: 'Telefon',
-      value: '+90 555 123 45 67',
-      link: 'tel:+905551234567',
+      value: '+90 531 431 99 21',
+      link: 'tel:+905314319921',
       color: 'from-blue-500 to-blue-600',
       desc: 'Pazartesi - Cumartesi, 09:00 - 20:00'
     },
@@ -24,7 +24,7 @@ export default function ContactPage() {
       icon: MessageCircle,
       title: 'WhatsApp',
       value: 'Hızlı Mesaj',
-      link: 'https://wa.me/905551234567',
+      link: 'https://wa.me/905314319921',
       color: 'from-green-500 to-green-600',
       desc: '7/24 WhatsApp desteği',
       external: true
@@ -141,7 +141,7 @@ export default function ContactPage() {
                 Anlık destek için WhatsApp&apos;tan bize yazın. Genellikle 5 dakika içinde dönüş yapıyoruz.
               </p>
               <a
-                href="https://wa.me/905551234567"
+                href="https://wa.me/905314319921"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-white text-green-600 px-4 py-2.5 rounded-xl font-bold hover:bg-gray-100 transition-colors text-sm"

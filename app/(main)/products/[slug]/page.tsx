@@ -183,7 +183,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             )}
 
             <a 
-              href={`https://wa.me/905551234567?text=${whatsappMessage}`}
+              href={`https://wa.me/905314319921?text=${whatsappMessage}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-xl font-bold hover:from-green-600 hover:to-green-700 transition-all shadow-lg shadow-green-500/30 hover:scale-[1.02]"
@@ -205,7 +205,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               </div>
               <div className="flex flex-col items-center text-center p-3 bg-white rounded-xl border border-gray-100">
                 <RotateCcw className="w-5 h-5 text-[#1E3A5F] mb-1" />
-                <span className="text-xs font-medium text-gray-700">Kolay İade</span>
+                <span className="text-xs font-medium text-gray-700">Çalışmazsa 3 Gün İade</span>
               </div>
             </div>
           </div>

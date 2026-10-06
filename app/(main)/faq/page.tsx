@@ -23,7 +23,7 @@ const faqs = [
     icon: <RotateCcw className="w-6 h-6 text-[#1E3A5F]" />,
     items: [
       { q: "Ürünlerde garanti var mı?", a: "Evet, elektronik ürünlerde distribütör veya satıcı garantisi bulunmaktadır. Ürün sayfasında garanti süresi detaylı olarak belirtilmiştir." },
-      { q: "İade koşullarınız nelerdir?", a: "Cayma hakkı kapsamında, teslim aldığınız tarihten itibaren 14 gün içinde, ürünü kullanmadan ve orijinal ambalajına zarar vermeden iade edebilirsiniz." }
+      { q: "İade koşullarınız nelerdir?", a: "İade yalnızca ürün çalışmıyorsa kabul edilir. Ürünü teslim aldığınız tarihten itibaren 3 gün içinde bizimle iletişime geçebilirsiniz." }
     ]
   },
   {
@@ -75,7 +75,7 @@ export default function FAQPage() {
         <div className="mt-12 bg-gradient-to-r from-[#1E3A5F] to-[#4A90A4] rounded-2xl p-8 text-center text-white">
           <h3 className="text-2xl font-bold mb-3">Daha fazla yardıma mı ihtiyacınız var?</h3>
           <p className="text-white/90 mb-6">Müşteri hizmetlerimiz size yardımcı olmaktan mutluluk duyacaktır.</p>
-          <a href="https://wa.me/905551234567" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-white text-[#1E3A5F] px-6 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors">
+          <a href="https://wa.me/905314319921" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-white text-[#1E3A5F] px-6 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors">
             WhatsApp ile İletişime Geçin
           </a>
         </div>

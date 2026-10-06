@@ -4,7 +4,7 @@ import ProductCard from '@/components/products/ProductCard';
 import HeroSlider from '@/components/layout/HeroSlider';
 import { fetchReviewSummaries } from '@/lib/utils/reviewSummaries';
 import Link from 'next/link';
-import { ChevronRight, Star, TrendingUp } from 'lucide-react';
+import { Star, TrendingUp } from 'lucide-react';
 
 export const dynamic = 'force-static';
 export const revalidate = 120;
@@ -37,8 +37,7 @@ export default async function HomePage() {
       .select('id, name, slug, image_url')
       .eq('is_active', true)
       .is('parent_id', null)
-      .order('display_order')
-      .limit(6),
+      .order('display_order'),
   ]);
 
   const featuredProducts = featuredResult.data ?? [];
@@ -53,47 +52,53 @@ export default async function HomePage() {
     <div className="min-h-screen">
       <HeroSlider />
       
-      {categories.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Kategoriler</h2>
-              <p className="text-gray-500 mt-1">İlgi alanınıza göre alışveriş yapın</p>
-            </div>
-            <Link href="/products" className="hidden sm:flex items-center gap-1 text-[#1E3A5F] font-semibold hover:gap-2 transition-all">
-              Tümünü Gör <ChevronRight className="w-4 h-4" />
-            </Link>
+ {categories.length > 0 && (
+  <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div
+      role="region"
+      aria-label="Kategoriler"
+      className="flex gap-4 overflow-x-auto pb-4 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-6"
+    >
+      {categories.map((category) => (
+        <Link
+          key={category.id}
+          href={`/category/${category.slug}`}
+          className="group flex flex-col items-center min-w-[90px] max-w-[100px] sm:min-w-[110px] sm:max-w-[120px] flex-none"
+        >
+          {/* Görsel Konteyneri */}
+          <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-gray-100 border border-gray-200/80 shadow-sm transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-md group-hover:border-gray-300">
+            {category.image_url ? (
+              <Image
+                src={category.image_url}
+                alt={category.name}
+                fill
+                sizes="(max-width: 640px) 100px, 120px"
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-xs font-medium text-gray-400">
+                Görsel Yok
+              </div>
+            )}
+            
+            {/* Soft Overlay */}
+            <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity duration-300 group-hover:opacity-10" />
           </div>
-          <div className="grid grid-cols-2 justify-items-start gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/category/${category.slug}`}
-                className="group relative aspect-[4/3] w-full max-w-[130px] overflow-hidden rounded-xl bg-gradient-to-br from-[#1E3A5F] to-[#4A90A4] shadow-sm transition-all duration-300 hover:shadow-xl sm:max-w-[180px] sm:rounded-2xl md:max-w-none"
-              >
-                {category.image_url && (
-                  <Image
-                    src={category.image_url}
-                    alt=""
-                    fill
-                    sizes="(max-width: 640px) 130px, (max-width: 768px) 180px, (max-width: 1024px) 33vw, 16vw"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/90 via-[#0F172A]/15 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-2 sm:p-4">
-                  <h3 className="font-bold text-white text-[11px] sm:text-sm lg:text-base drop-shadow-sm group-hover:text-[#F5C06B] transition-colors">
-                    {category.name}
-                  </h3>
-                  <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-semibold text-white/80 transition-colors group-hover:text-white sm:mt-2 sm:text-xs">
-                    Ürünleri keşfet <ChevronRight className="w-3.5 h-3.5" />
-                  </span>
-                </div>
-              </Link>
-            ))}
+
+          {/* Kategori Adı */}
+          <div className="mt-2.5 w-full text-center">
+            <h3 className="truncate text-xs sm:text-sm font-semibold text-gray-800 transition-colors duration-200 group-hover:text-gray-900">
+              {category.name}
+            </h3>
+            <span className="mt-0.5 block truncate text-[10px] sm:text-xs font-medium text-gray-600 transition-colors group-hover:text-amber-600">
+              Keşfet &rarr;
+            </span>
           </div>
-        </section>
-      )}
+        </Link>
+      ))}
+    </div>
+  </section>
+)}
 
       {featuredProducts.length > 0 && (
         <section className="bg-gradient-to-b from-gray-50 to-white py-12">

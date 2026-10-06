@@ -60,7 +60,7 @@ export default function OrderButton({ product }: OrderButtonProps) {
         `Sipariş No: ${orderNumber}%0A` +
         `Teşekkürler.`;
 
-      const whatsappUrl = `https://wa.me/905551234567?text=${message}`;
+      const whatsappUrl = `https://wa.me/905314319921?text=${message}`;
       window.open(whatsappUrl, '_blank');
     } catch (error) {
       console.error('Hata:', error);

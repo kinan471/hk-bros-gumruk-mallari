@@ -45,8 +45,8 @@ export default function AboutPage() {
                 </div>
                 <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
                   <RotateCcw className="w-10 h-10 text-[#1E3A5F] mb-4" />
-                  <h3 className="font-bold text-gray-900 mb-2">Kolay İade Koşulları</h3>
-                  <p className="text-sm text-gray-600">14 gün içinde koşulsuz iade hakkınız bulunmaktadır. Müşteri memnuniyeti önceliğimizdir.</p>
+                  <h3 className="font-bold text-gray-900 mb-2">Ürün Çalışmazsa İade</h3>
+                  <p className="text-sm text-gray-600">Ürün çalışmıyorsa, teslim aldığınız tarihten itibaren 3 gün içinde iade edebilirsiniz.</p>
                 </div>
               </div>
             </div>
