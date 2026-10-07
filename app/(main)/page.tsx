@@ -77,12 +77,12 @@ export default async function HomePage() {
               Tüm ürünler <ArrowUpRight className="h-4 w-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:gap-4 sm:px-0">
             {categories.map((category, index) => (
               <Link
                 key={category.id}
                 href={`/category/${category.slug}`}
-                className="group relative isolate flex min-h-[170px] overflow-hidden rounded-2xl border border-gray-200 bg-[#f3f1eb] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] sm:min-h-[220px] lg:min-h-[250px]"
+                className="group relative isolate flex min-h-[135px] w-[72vw] max-w-[220px] shrink-0 snap-start overflow-hidden rounded-xl border border-gray-200 bg-[#f3f1eb] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] sm:min-h-[200px] sm:w-[260px] sm:max-w-none sm:rounded-2xl lg:min-h-[230px] lg:w-[280px]"
               >
                 {category.image_url ? (
                   <Image
@@ -94,18 +94,18 @@ export default async function HomePage() {
                   />
                 ) : (
                   <div className="absolute inset-0 -z-10 flex items-center justify-center bg-gradient-to-br from-[#eee9dc] via-[#f7f5f0] to-[#dce4e4]">
-                    <Package className="h-12 w-12 text-[#1E3A5F]/20 transition-transform duration-500 group-hover:scale-110 sm:h-16 sm:w-16" strokeWidth={1} />
+                    <Package className="h-9 w-9 text-[#1E3A5F]/20 transition-transform duration-500 group-hover:scale-110 sm:h-16 sm:w-16" strokeWidth={1} />
                   </div>
                 )}
                 <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                <div className="mt-auto flex w-full items-end justify-between gap-2 p-3 text-white sm:p-5">
+                <div className="mt-auto flex w-full items-end justify-between gap-2 p-2.5 text-white sm:p-5">
                   <div className="min-w-0">
-                    <span className="mb-1 block text-[10px] font-medium uppercase tracking-[0.15em] text-white/75">0{index + 1} / Koleksiyon</span>
-                    <h3 className="line-clamp-2 text-sm font-semibold leading-snug sm:text-lg">{category.name}</h3>
-                    <span className="mt-1 block text-[11px] text-white/75 sm:text-xs">Koleksiyonu keşfet</span>
+                    <span className="mb-0.5 block text-[8px] font-medium uppercase tracking-[0.12em] text-white/75 sm:mb-1 sm:text-[10px] sm:tracking-[0.15em]">0{index + 1} / Koleksiyon</span>
+                    <h3 className="line-clamp-2 text-xs font-semibold leading-snug sm:text-lg">{category.name}</h3>
+                    <span className="mt-0.5 block text-[9px] text-white/75 sm:mt-1 sm:text-xs">Koleksiyonu keşfet</span>
                   </div>
-                  <span className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/40 bg-white/10 backdrop-blur-sm transition-all group-hover:bg-white group-hover:text-gray-950">
-                    <ArrowUpRight className="h-4 w-4" />
+                  <span className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 bg-white/10 backdrop-blur-sm transition-all group-hover:bg-white group-hover:text-gray-950 sm:h-8 sm:w-8">
+                    <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </span>
                 </div>
               </Link>

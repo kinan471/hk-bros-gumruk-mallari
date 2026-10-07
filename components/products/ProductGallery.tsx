@@ -44,25 +44,22 @@ export default function ProductGallery({
 
   return (
     <div className="space-y-4 lg:sticky lg:top-28 lg:self-start">
-      <div className="relative aspect-square overflow-hidden rounded-3xl border border-gray-200/80 bg-[#f6f5f1] shadow-sm">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-gray-200/80 bg-[#f6f5f1] shadow-sm sm:aspect-square sm:rounded-3xl">
         <Image
           src={currentImage}
           alt={`${productName} - Görsel ${activeIndex + 1}`}
           fill
-          className="object-contain p-5 transition-transform duration-500 sm:p-8"
+          className="object-contain p-3 transition-transform duration-500 sm:p-8"
           preload={activeIndex === 0}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
           quality={85}
         />
         
         {hasDiscount && activeIndex === 0 && (
-          <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-[#8c332b] px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
+          <div className="absolute -left-8 top-4 flex w-32 -rotate-45 items-center justify-center gap-1.5 bg-[#8c332b] py-1 text-[10px] font-semibold text-white shadow-sm sm:left-4 sm:top-4 sm:w-auto sm:rotate-0 sm:rounded-full sm:px-3 sm:py-1.5 sm:text-xs">
             %{discountPercentage} İndirim
           </div>
         )}
-        <span className="absolute bottom-4 right-4 rounded-full border border-white/80 bg-white/85 px-3 py-1.5 text-[10px] font-medium text-gray-600 backdrop-blur">
-          {activeIndex + 1} / {allImages.length}
-        </span>
       </div>
       
       {allImages.length > 1 && (
@@ -73,7 +70,7 @@ export default function ProductGallery({
               type="button"
               onClick={() => setActiveIndex(index)}
               aria-pressed={activeIndex === index}
-              className={`relative aspect-square w-[68px] shrink-0 overflow-hidden rounded-xl border transition-all sm:w-[82px] ${
+              className={`relative aspect-square w-[58px] shrink-0 overflow-hidden rounded-lg border transition-all sm:w-[82px] sm:rounded-xl ${
                 activeIndex === index 
                   ? 'border-[#1E3A5F] ring-2 ring-[#1E3A5F]/15'
                   : 'border-gray-200 bg-[#f6f5f1] hover:border-gray-400'
@@ -95,7 +92,7 @@ export default function ProductGallery({
 
       {/* حالة المنتج */}
       {productCondition && (
-        <div className={`rounded-2xl border p-4 sm:p-5 ${getConditionStyle(productCondition)}`}>
+        <div className={`rounded-xl border p-3 sm:rounded-2xl sm:p-5 ${getConditionStyle(productCondition)}`}>
           <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-950">
             <Shield className="h-4 w-4 text-[#1E3A5F]" />
             Ürün kondisyonu

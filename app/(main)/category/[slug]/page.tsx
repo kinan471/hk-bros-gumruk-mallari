@@ -116,21 +116,21 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             <FolderOpen className="w-5 h-5 text-[#1E3A5F]" />
             Alt Kategoriler
           </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:gap-4 sm:px-0">
             {subcategories.map((subcat, index) => (
-              <Link key={subcat.id} href={`/category/${subcat.slug}`} className="group relative isolate flex min-h-[135px] overflow-hidden rounded-2xl border border-gray-200 bg-[#f3f1eb] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:min-h-[165px]">
+              <Link key={subcat.id} href={`/category/${subcat.slug}`} className="group relative isolate flex min-h-[112px] w-[68vw] max-w-[190px] shrink-0 snap-start overflow-hidden rounded-xl border border-gray-200 bg-[#f3f1eb] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:min-h-[145px] sm:w-[220px] sm:max-w-none sm:rounded-2xl">
                 {subcat.image_url ? (
                   <Image src={subcat.image_url} alt="" fill sizes="(max-width: 640px) 48vw, 25vw" className="absolute inset-0 -z-10 object-cover transition-transform duration-500 group-hover:scale-105" />
                 ) : (
                   <div className="absolute inset-0 -z-10 flex items-center justify-center bg-gradient-to-br from-[#eee9dc] to-[#dce4e4]">
-                    <Package className="h-10 w-10 text-[#1E3A5F]/20" strokeWidth={1} />
+                    <Package className="h-8 w-8 text-[#1E3A5F]/20 sm:h-10 sm:w-10" strokeWidth={1} />
                   </div>
                 )}
                 <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                <div className="mt-auto flex w-full items-end justify-between gap-2 p-3 text-white sm:p-4">
+                <div className="mt-auto flex w-full items-end justify-between gap-2 p-2.5 text-white sm:p-4">
                   <div>
-                    <span className="mb-1 block text-[10px] uppercase tracking-widest text-white/70">0{index + 1}</span>
-                    <h3 className="text-sm font-semibold sm:text-base">{subcat.name}</h3>
+                    <span className="mb-0.5 block text-[9px] uppercase tracking-widest text-white/70 sm:mb-1 sm:text-[10px]">0{index + 1}</span>
+                    <h3 className="text-xs font-semibold sm:text-base">{subcat.name}</h3>
                   </div>
                   <ArrowUpRight className="mb-0.5 h-4 w-4 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </div>

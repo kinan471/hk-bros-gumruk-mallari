@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Image from 'next/image';
-import { Heart, ImageIcon, Star, Tag, Zap, Truck } from 'lucide-react';
+import { Heart, ImageIcon, Star, Tag, Zap } from 'lucide-react';
 import type { ProductCardProduct } from '@/types/database';
 import type { ReviewSummary } from '@/lib/utils/reviewSummaries';
 import Link from 'next/link';
@@ -73,45 +73,40 @@ export default function ProductCard({ product, reviewSummary }: ProductCardProps
           />
         )}
         
-        <div className="absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1.5 sm:left-3 sm:top-3">
-          {product.is_featured && (
-            <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-semibold text-gray-700 shadow-sm backdrop-blur sm:text-[10px]">
-              Öne çıkan
-            </span>
-          )}
-          {hasDiscount && (
-            <span className="flex items-center gap-1 rounded-full bg-[#8c332b] px-2.5 py-1 text-[9px] font-semibold text-white shadow-sm sm:text-[10px]">
-              <Tag className="h-2.5 w-2.5" />
-              %{discountPercentage} indirim
-            </span>
-          )}
-        </div>
-        {product.product_type === 'physical' && (
-          <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[9px] font-medium text-gray-700 shadow-sm backdrop-blur sm:bottom-3 sm:left-3 sm:px-2.5 sm:text-[10px]">
-            <Truck className="h-3 w-3" />
-            Fiziksel ürün
-          </div>
+        {hasDiscount && (
+          <span className="absolute -left-8 top-4 z-10 flex w-32 -rotate-45 items-center justify-center gap-1 bg-[#8c332b] py-1 text-[9px] font-semibold text-white shadow-sm sm:left-3 sm:top-3 sm:w-auto sm:rotate-0 sm:rounded-full sm:px-2.5 sm:py-1 sm:text-[10px]">
+            <Tag className="h-2.5 w-2.5" />
+            %{discountPercentage} indirim
+          </span>
         )}
       </Link>
 
-      <button
-        type="button"
-        onClick={handleFavorite}
-        className={`absolute right-2.5 top-2.5 z-20 flex h-9 w-9 items-center justify-center rounded-full shadow-sm backdrop-blur transition-colors sm:right-3 sm:top-3 ${
-          isFavorite ? 'bg-[#8c332b] text-white' : 'bg-white/95 text-gray-700 hover:bg-white'
-        }`}
-        aria-label={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
-        aria-pressed={isFavorite}
-      >
-        <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
-      </button>
-
       <div className="flex flex-1 flex-col p-3 sm:p-4">
-        {product.brand && (
-          <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.15em] text-gray-500 sm:text-[10px]">
-            {product.brand}
-          </p>
-        )}
+        <div className="mb-1.5 flex min-h-8 items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            {product.brand && (
+              <p className="truncate text-[9px] font-semibold uppercase tracking-[0.15em] text-gray-500 sm:text-[10px]">
+                {product.brand}
+              </p>
+            )}
+            {product.is_featured && (
+              <span className="shrink-0 rounded-full bg-[#f7f1e5] px-2 py-1 text-[8px] font-semibold text-[#775821] sm:text-[9px]">
+                Öne çıkan
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleFavorite}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+              isFavorite ? 'bg-[#f8ecea] text-[#8c332b]' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+            aria-label={isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle'}
+            aria-pressed={isFavorite}
+          >
+            <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+          </button>
+        </div>
         
         <Link href={`/products/${product.slug}`} className="rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1E3A5F]">
           <h3 className="mb-2 line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug text-gray-950 transition-colors group-hover:text-[#1E3A5F] sm:text-base">
