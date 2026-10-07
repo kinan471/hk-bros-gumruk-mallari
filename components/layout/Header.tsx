@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Menu, X, User, Heart, Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import type { Product } from '@/types/database';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,7 +16,6 @@ type SearchSuggestion = Pick<
 
 export default function Header() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -86,7 +84,7 @@ export default function Header() {
   }, []);
 
   const performSearch = useCallback(async (query: string, isMobile: boolean = false) => {
-    if (!query.trim()) {
+    if (query.trim().length < 2) {
       if (isMobile) {
         setMobileSearchResults([]);
         setMobileIsDropdownOpen(false);
@@ -102,25 +100,16 @@ export default function Header() {
     setSelectedIndex(-1);
 
     try {
-      const searchTerm = `%${query.trim()}%`;
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, slug, main_image, regular_price, sale_price, brand, tags, categories(name, slug)')
-        .or(
-          `name.ilike.${searchTerm},` +
-          `short_description.ilike.${searchTerm},` +
-          `description.ilike.${searchTerm},` +
-          `brand.ilike.${searchTerm}`
-        )
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(6);
+      const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
+      if (!response.ok) throw new Error(`Search request failed with status ${response.status}.`);
+      const payload: unknown = await response.json();
+      if (!payload || typeof payload !== 'object' || !('results' in payload) || !Array.isArray(payload.results)) {
+        throw new Error('Search response was invalid.');
+      }
 
-      if (error) throw error;
-
-      const filteredResults = data || [];
-      if (query.trim().length > 0) {
-        const lowerQuery = query.toLowerCase();
+      const filteredResults = payload.results as SearchSuggestion[];
+      const lowerQuery = query.toLowerCase();
+      if (lowerQuery.length > 0) {
         const tagMatches = filteredResults.filter(
           (product) => product.tags?.some((tag: string) => tag.toLowerCase().includes(lowerQuery))
         );
@@ -149,7 +138,7 @@ export default function Header() {
       if (isMobile) setMobileIsSearching(false);
       else setIsSearching(false);
     }
-  }, [supabase]);
+  }, []);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -157,7 +146,7 @@ export default function Header() {
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
 
-    if (value.trim().length === 0) {
+    if (value.trim().length < 2) {
       setSearchResults([]);
       setIsDropdownOpen(false);
       return;
@@ -172,7 +161,7 @@ export default function Header() {
 
     if (mobileDebounceTimerRef.current) clearTimeout(mobileDebounceTimerRef.current);
 
-    if (value.trim().length === 0) {
+    if (value.trim().length < 2) {
       setMobileSearchResults([]);
       setMobileIsDropdownOpen(false);
       return;
@@ -326,6 +315,7 @@ export default function Header() {
                 ref={searchInputRef}
                 type="text"
                 placeholder="Ürün ara... (örn: samsung, nike, telefon)"
+                maxLength={80}
                 value={searchQuery}
                 onChange={handleSearchChange}
                 onKeyDown={handleKeyDown}
@@ -419,6 +409,7 @@ export default function Header() {
                   ref={mobileSearchInputRef}
                   type="text"
                   placeholder="Ürün ara..."
+                  maxLength={80}
                   value={mobileSearchQuery}
                   onChange={handleMobileSearchChange}
                   onFocus={() => mobileSearchResults.length > 0 && setMobileIsDropdownOpen(true)}

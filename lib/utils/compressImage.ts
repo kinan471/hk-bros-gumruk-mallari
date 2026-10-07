@@ -8,12 +8,7 @@ export async function compressImage(file: File): Promise<File> {
     fileType: 'image/webp',
   };
 
-  try {
-    const compressedFile = await imageCompression(file, options);
-    const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
-    return new File([compressedFile], newFileName, { type: 'image/webp' });
-  } catch (error) {
-    console.error('Image compression failed:', error);
-    return file;
-  }
+  const compressedFile = await imageCompression(file, options);
+  const newFileName = file.name.replace(/\.[^/.]+$/, '') + '.webp';
+  return new File([compressedFile], newFileName, { type: 'image/webp' });
 }

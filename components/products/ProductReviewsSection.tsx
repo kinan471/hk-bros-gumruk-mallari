@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import ReviewForm from './ReviewForm';
-import ReviewsList from './ReviewsList';
+import ReviewsList, { type Review } from './ReviewsList';
 
 interface ProductReviewsSectionProps {
   productId: string;
+  initialReviews: Review[];
 }
 
-export default function ProductReviewsSection({ productId }: ProductReviewsSectionProps) {
+export default function ProductReviewsSection({ productId, initialReviews }: ProductReviewsSectionProps) {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleReviewSuccess = () => {
@@ -21,7 +22,7 @@ export default function ProductReviewsSection({ productId }: ProductReviewsSecti
         <ReviewForm productId={productId} onSuccess={handleReviewSuccess} />
       </div>
       <div className="lg:col-span-2">
-        <ReviewsList key={refreshKey} productId={productId} />
+        <ReviewsList productId={productId} initialReviews={initialReviews} refreshKey={refreshKey} />
       </div>
     </div>
   );

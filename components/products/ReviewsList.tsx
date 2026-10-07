@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Star, MessageSquare, ThumbsUp, Calendar } from 'lucide-react';
 
-interface Review {
+export interface Review {
   id: string;
   product_id: string;
   user_name: string;
@@ -15,22 +15,36 @@ interface Review {
 
 interface ReviewsListProps {
   productId: string;
+  initialReviews: Review[];
+  refreshKey: number;
 }
 
-export default function ReviewsList({ productId }: ReviewsListProps) {
-  const supabase = createClient();
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [averageRating, setAverageRating] = useState(0);
-  const [totalReviews, setTotalReviews] = useState(0);
-  const [ratingDistribution, setRatingDistribution] = useState({
-    5: 0, 4: 0, 3: 0, 2: 0, 1: 0
+export default function ReviewsList({ productId, initialReviews, refreshKey }: ReviewsListProps) {
+  const supabase = useMemo(() => createClient(), []);
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
+  const [loading, setLoading] = useState(false);
+  const [averageRating, setAverageRating] = useState(() =>
+    initialReviews.length > 0
+      ? Math.round((initialReviews.reduce((sum, review) => sum + review.rating, 0) / initialReviews.length) * 10) / 10
+      : 0
+  );
+  const [totalReviews, setTotalReviews] = useState(initialReviews.length);
+  const [ratingDistribution, setRatingDistribution] = useState(() => {
+    const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    initialReviews.forEach((review) => {
+      if (review.rating >= 1 && review.rating <= 5) {
+        distribution[review.rating as keyof typeof distribution]++;
+      }
+    });
+    return distribution;
   });
 
   useEffect(() => {
+    if (refreshKey === 0) return;
     let isCurrent = true;
 
     const loadReviews = async () => {
+      setLoading(true);
       try {
         const { data, error } = await supabase
           .from('reviews')
@@ -69,7 +83,7 @@ export default function ReviewsList({ productId }: ReviewsListProps) {
     return () => {
       isCurrent = false;
     };
-  }, [productId, supabase]);
+  }, [productId, refreshKey, supabase]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

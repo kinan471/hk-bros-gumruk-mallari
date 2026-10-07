@@ -173,11 +173,11 @@ export default function NewProductPage() {
       let mainImageUrl = '';
       const galleryUrls: string[] = [];
       if (images.length > 0) {
-        const imageUploadPromises = images.map(async (image, index) => {
+        const imageUploadPromises = images.map(async (image) => {
           const fileExt = image.name.split('.').pop();
-          const fileName = `${Date.now()}_${index}.${fileExt}`;
+          const fileName = `${crypto.randomUUID()}.${fileExt}`;
           const filePath = `products/${fileName}`;
-          const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, image, { cacheControl: '3600', upsert: false });
+          const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, image, { cacheControl: '31536000', upsert: false });
           if (uploadError) throw uploadError;
           const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(filePath);
           return publicUrl;

@@ -315,14 +315,14 @@ export default function EditProductPage() {
       let newMainImageUrl = '';
 
       if (newImages.length > 0) {
-        const imageUploadPromises = newImages.map(async (image, index) => {
+        const imageUploadPromises = newImages.map(async (image) => {
           const fileExt = image.name.split('.').pop();
-          const fileName = `${Date.now()}_${index}.${fileExt}`;
+          const fileName = `${crypto.randomUUID()}.${fileExt}`;
           const filePath = `products/${fileName}`;
 
           const { error: uploadError } = await supabase.storage
             .from('product-images')
-            .upload(filePath, image, { cacheControl: '3600', upsert: false });
+            .upload(filePath, image, { cacheControl: '31536000', upsert: false });
 
           if (uploadError) throw uploadError;
 

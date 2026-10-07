@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Zap, Shield } from 'lucide-react';
+import { Shield } from 'lucide-react';
 
 interface ProductGalleryProps {
   mainImage: string;
@@ -43,39 +43,40 @@ export default function ProductGallery({
   };
 
   return (
-    <div className="space-y-4">
-      {/* الصورة الرئيسية */}
-      <div className="aspect-square bg-white rounded-2xl overflow-hidden relative group shadow-sm">
+    <div className="space-y-4 lg:sticky lg:top-28 lg:self-start">
+      <div className="relative aspect-square overflow-hidden rounded-3xl border border-gray-200/80 bg-[#f6f5f1] shadow-sm">
         <Image
           src={currentImage}
           alt={`${productName} - Görsel ${activeIndex + 1}`}
           fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="object-contain p-5 transition-transform duration-500 sm:p-8"
           preload={activeIndex === 0}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
           quality={85}
         />
         
         {hasDiscount && activeIndex === 0 && (
-          <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg flex items-center gap-1">
-            <Zap className="w-4 h-4 fill-current" />
+          <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-[#8c332b] px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
             %{discountPercentage} İndirim
           </div>
         )}
+        <span className="absolute bottom-4 right-4 rounded-full border border-white/80 bg-white/85 px-3 py-1.5 text-[10px] font-medium text-gray-600 backdrop-blur">
+          {activeIndex + 1} / {allImages.length}
+        </span>
       </div>
       
-      {/* الصور المصغرة القابلة للنقر */}
       {allImages.length > 1 && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {allImages.map((img, index) => (
             <button
               key={index}
               type="button"
               onClick={() => setActiveIndex(index)}
-              className={`aspect-square bg-white rounded-lg overflow-hidden border-2 transition-all cursor-pointer relative shadow-sm ${
+              aria-pressed={activeIndex === index}
+              className={`relative aspect-square w-[68px] shrink-0 overflow-hidden rounded-xl border transition-all sm:w-[82px] ${
                 activeIndex === index 
-                  ? 'border-[#1E3A5F] ring-2 ring-[#1E3A5F]/20' 
-                  : 'border-transparent hover:border-[#1E3A5F]'
+                  ? 'border-[#1E3A5F] ring-2 ring-[#1E3A5F]/15'
+                  : 'border-gray-200 bg-[#f6f5f1] hover:border-gray-400'
               }`}
               aria-label={`${productName} görsel ${index + 1}`}
             >
@@ -83,8 +84,8 @@ export default function ProductGallery({
                 src={img}
                 alt={`${productName} ${index + 1}`}
                 fill
-                className="object-cover"
-                sizes="25vw"
+                className="object-contain p-2"
+                sizes="82px"
                 loading="lazy"
               />
             </button>
@@ -94,17 +95,14 @@ export default function ProductGallery({
 
       {/* حالة المنتج */}
       {productCondition && (
-        <div className={`p-4 rounded-xl border ${getConditionStyle(productCondition)}`}>
-          <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[#1E3A5F]" />
-            Ürün Durumu
+        <div className={`rounded-2xl border p-4 sm:p-5 ${getConditionStyle(productCondition)}`}>
+          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-950">
+            <Shield className="h-4 w-4 text-[#1E3A5F]" />
+            Ürün kondisyonu
           </h4>
-          <p className="text-sm text-gray-700">
-            <span className="font-semibold">Bu ürün: </span>
-            {getConditionIcon(productCondition)} {productCondition}
-          </p>
-          <p className="text-xs text-gray-500 mt-2">
-            * Gümrük malları doğası gereği ambalajında küçük değişiklikler olabilir, ancak ürün işlevselliği ve orijinalliği %100 garantilidir.
+          <p className="text-sm font-medium text-gray-700">{getConditionIcon(productCondition)} {productCondition}</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
+            Ürün durumuyla ilgili detayları sipariş öncesinde WhatsApp üzerinden satıcıya sorabilirsiniz.
           </p>
         </div>
       )}

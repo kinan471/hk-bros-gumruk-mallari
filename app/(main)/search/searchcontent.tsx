@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import ProductCard from '@/components/products/ProductCard';
 import Link from 'next/link';
 import { Search as SearchIcon, ArrowLeft, Loader2, Tag } from 'lucide-react';
 import type { ProductCardProduct } from '@/types/database';
-import { fetchReviewSummaries, type ReviewSummary } from '@/lib/utils/reviewSummaries';
+import type { ReviewSummary } from '@/lib/utils/reviewSummaries';
 
 type SearchProduct = ProductCardProduct & {
   short_description: string | null;
@@ -23,7 +22,6 @@ export default function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get('q') || '';
-  const supabase = createClient();
 
   const [products, setProducts] = useState<SearchProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,68 +38,14 @@ export default function SearchContent() {
       setIsSaleSearch(false);
 
       try {
-        const lowerQuery = query.toLowerCase().trim();
-
-        if (lowerQuery === 'indirim' || lowerQuery === 'sale' || lowerQuery === 'discount') {
-          setIsSaleSearch(true);
-          const { data, error } = await supabase
-            .from('products')
-            .select('id, name, slug, brand, regular_price, sale_price, short_description, main_image, is_active, created_at, category_id, tags, is_featured, track_inventory, stock_quantity, stock_status, product_condition, product_type, categories(name, slug)')
-            .eq('is_active', true)
-            .not('sale_price', 'is', null)
-            .order('created_at', { ascending: false })
-            .limit(50);
-
-          if (error) throw error;
-          const reviewSummaries = await fetchReviewSummaries(
-            supabase,
-            data?.map((product) => product.id) ?? []
-          );
-          setProducts((data || []).map((product) => ({
-            ...product,
-            reviewSummary: reviewSummaries[product.id],
-          })));
-          return;
-        }
-
-        const searchTerm = `%${query}%`;
-        const { data, error } = await supabase
-          .from('products')
-          .select('id, name, slug, brand, regular_price, sale_price, short_description, main_image, is_active, created_at, category_id, tags, is_featured, track_inventory, stock_quantity, stock_status, product_condition, product_type, categories(name, slug)')
-          .or(
-            `name.ilike.${searchTerm},` +
-            `short_description.ilike.${searchTerm},` +
-            `description.ilike.${searchTerm},` +
-            `brand.ilike.${searchTerm}`
-          )
-          .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (error) throw error;
-
-        const filteredResults = data || [];
-        if (query.length > 0) {
-          const tagMatches = filteredResults.filter(
-            (product) => product.tags?.some((tag: string) => tag.toLowerCase().includes(lowerQuery))
-          );
-          const existingIds = new Set(filteredResults.map((product) => product.id));
-          tagMatches.forEach((p) => {
-            if (!existingIds.has(p.id)) {
-              filteredResults.push(p);
-              existingIds.add(p.id);
-            }
-          });
-        }
-
-        const reviewSummaries = await fetchReviewSummaries(
-          supabase,
-          filteredResults.map((product) => product.id)
-        );
-        setProducts(filteredResults.map((product) => ({
-          ...product,
-          reviewSummary: reviewSummaries[product.id],
-        })));
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&mode=results`);
+        if (!response.ok) throw new Error(`Search request failed with status ${response.status}.`);
+        const payload = await response.json() as {
+          results: SearchProduct[];
+          isSaleSearch: boolean;
+        };
+        setIsSaleSearch(payload.isSaleSearch);
+        setProducts(payload.results);
       } catch (error) {
         console.error('Search error:', error);
         setProducts([]);
@@ -111,7 +55,7 @@ export default function SearchContent() {
     };
 
     fetchResults();
-  }, [query, supabase]);
+  }, [query]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,6 +90,7 @@ export default function SearchContent() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Ürün ara..."
+            maxLength={80}
             className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:border-[#1E3A5F] focus:outline-none text-lg"
           />
           <button

@@ -47,15 +47,20 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   const [galleryRes, relatedRes, ratingRes] = await Promise.all([
     supabase.from('product_images').select('image_url').eq('product_id', product.id).order('display_order'),
     supabase.from('products').select('id, name, slug, regular_price, sale_price, main_image, is_on_sale').eq('category_id', product.category_id).eq('is_active', true).neq('id', product.id).limit(4),
-    supabase.from('reviews').select('rating').eq('product_id', product.id).eq('is_approved', true)
+    supabase
+      .from('reviews')
+      .select('id, product_id, user_name, rating, comment, created_at')
+      .eq('product_id', product.id)
+      .eq('is_approved', true)
+      .order('created_at', { ascending: false }),
   ]);
 
   const galleryImages = galleryRes.data?.map((img) => img.image_url) || [];
   const relatedProducts = relatedRes.data || [];
-  const ratings = ratingRes.data || [];
+  const reviews = ratingRes.data || [];
 
-  const avgRating = ratings.length > 0 
-    ? Math.round((ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length) * 10) / 10 
+  const avgRating = reviews.length > 0
+    ? Math.round((reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length) * 10) / 10
     : 0;
 
   const hasDiscount = product.sale_price && product.sale_price < (product.regular_price || 0);
@@ -80,39 +85,42 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   }
 
   const currentPrice = product.sale_price || product.regular_price || 0;
-  const stockText = product.track_inventory 
-    ? (product.stock_quantity > 0 ? `${product.stock_quantity} adet` : 'Tükendi') 
-    : 'Stokta Var';
+  const stockText = product.track_inventory
+    ? product.stock_status === 'in_stock'
+      ? (product.stock_quantity > 0 ? `${product.stock_quantity} adet` : 'Stokta')
+      : product.stock_status === 'pre_order'
+        ? 'Ön sipariş'
+        : 'Stokta yok'
+    : 'Stok bilgisi için iletişime geçin';
   
-  const whatsappMessage = `Merhaba HK BROS, web sitenizdeki aşağıdaki ürün hakkında bilgi almak ve sipariş vermek istiyorum.%0A%0A` +
-    `📦 *Ürün:* ${product.name}%0A` +
-    `💰 *Fiyat:* ${currentPrice}%0A` +
-    `📊 *Stok:* ${stockText}%0A` +
-    `🏷️ *Durum:* ${product.product_condition || 'Belirtilmemiş'}%0A` +
-    ` *Link:* https://hk-bros-gumruk-mallari.vercel.app/products/${product.slug}%0A%0A` +
+  const whatsappMessage = `Merhaba HK BROS, ${product.name} hakkında bilgi almak ve sipariş vermek istiyorum.\n\n` +
+    `Ürün: ${product.name}\n` +
+    `Fiyat: ₺${currentPrice}\n` +
+    `Stok: ${stockText}\n` +
+    `Durum: ${product.product_condition || 'Belirtilmemiş'}\n` +
+    `Link: https://hk-bros-gumruk-mallari.vercel.app/products/${product.slug}\n\n` +
     `Teşekkürler.`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6 flex-wrap">
-          <Link href="/" className="hover:text-[#1E3A5F] transition-colors">Ana Sayfa</Link>
+    <div className="min-h-screen bg-[#faf9f6]">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+        <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-2 text-xs text-gray-500 sm:mb-7 sm:text-sm">
+          <Link href="/" className="transition-colors hover:text-gray-950">Ana Sayfa</Link>
           {breadcrumbs.map((cat, index) => (
             <span key={cat.id} className="flex items-center gap-2">
               <span className="text-gray-400">›</span>
               {index === breadcrumbs.length - 1 ? (
-                <span className="text-gray-900 font-medium">{cat.name}</span>
+                <span className="font-medium text-gray-900">{cat.name}</span>
               ) : (
-                <Link href={`/category/${cat.slug}`} className="hover:text-[#1E3A5F] transition-colors">{cat.name}</Link>
+                <Link href={`/category/${cat.slug}`} className="transition-colors hover:text-gray-950">{cat.name}</Link>
               )}
             </span>
           ))}
           <span className="text-gray-400">›</span>
-          <span className="text-gray-900 font-medium truncate">{product.name}</span>
+          <span aria-current="page" className="max-w-[45vw] truncate font-medium text-gray-900">{product.name}</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] lg:gap-12">
           <ProductGallery 
             mainImage={product.main_image}
             galleryImages={galleryImages}
@@ -122,71 +130,69 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             productCondition={product.product_condition}
           />
 
-          <div className="space-y-6">
-            <div>
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <div className="rounded-3xl border border-gray-200/80 bg-white p-5 shadow-sm sm:p-7 lg:sticky lg:top-28 lg:p-8">
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center gap-2">
                 {product.is_featured && (
-                  <span className="px-3 py-1 bg-gradient-to-r from-[#E8B04B] to-[#F5C06B] text-white text-xs font-bold rounded-full flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-current" /> Öne Çıkan
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f7f1e5] px-3 py-1.5 text-[11px] font-semibold text-[#775821]">
+                    <Star className="h-3.5 w-3.5 fill-current" /> Öne çıkan
                   </span>
                 )}
-                {product.is_on_sale && (
-                  <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">İndirim</span>
+                {hasDiscount && (
+                  <span className="rounded-full bg-[#f8ecea] px-3 py-1.5 text-[11px] font-semibold text-[#8c332b]">%{discountPercentage} indirim</span>
                 )}
+                {product.product_condition && <span className="rounded-full bg-gray-100 px-3 py-1.5 text-[11px] font-medium text-gray-700">{product.product_condition}</span>}
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 leading-tight">{product.name}</h1>
+              <h1 className="text-2xl font-semibold leading-tight tracking-tight text-gray-950 sm:text-3xl lg:text-[2.5rem]">{product.name}</h1>
               {product.brand && (
-                <p className="text-gray-600 mb-4 flex items-center gap-2">
-                  <span className="text-gray-400">Marka:</span> 
-                  <span className="font-semibold text-gray-900">{product.brand}</span>
+                <p className="flex items-center gap-2 text-sm text-gray-600">
+                  <span className="text-gray-400">Marka</span>
+                  <span className="font-medium text-gray-900">{product.brand}</span>
                 </p>
               )}
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex">
+              <a href="#reviews" className="inline-flex items-center gap-2 rounded-md text-sm text-gray-600 transition-colors hover:text-gray-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1E3A5F]">
+                <span className="flex items-center gap-0.5" aria-hidden="true">
                   {[1, 2, 3, 4, 5].map(star => (
-                    <Star key={star} className={`w-5 h-5 ${star <= Math.round(avgRating) ? 'text-[#E8B04B] fill-current' : 'text-gray-300'}`} />
+                    <Star key={star} className={`h-4 w-4 ${star <= Math.round(avgRating) ? 'fill-current text-[#bd8d3b]' : 'text-gray-300'}`} />
                   ))}
-                </div>
-                <span className="text-sm text-gray-600">
-                  {avgRating > 0 ? `${avgRating} (${ratings.length} değerlendirme)` : 'Henüz değerlendirme yok'}
                 </span>
-              </div>
+                <span>{avgRating > 0 ? `${avgRating} · ${reviews.length} değerlendirme` : 'İlk değerlendirmeyi yapın'}</span>
+              </a>
             </div>
 
-            <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-              {product.sale_price ? (
-                <div className="flex items-baseline gap-3 flex-wrap">
-                  <span className="text-4xl font-bold text-red-600">₺{product.sale_price}</span>
-                  <span className="text-xl text-gray-400 line-through">₺{product.regular_price}</span>
-                  <span className="px-2 py-1 bg-red-100 text-red-600 text-sm font-bold rounded-md">%{discountPercentage} İndirim</span>
+            <div className="border-y border-gray-100 py-5">
+              {hasDiscount ? (
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="text-3xl font-semibold tracking-tight text-[#8c332b] sm:text-4xl">₺{product.sale_price}</span>
+                  <span className="text-base text-gray-400 line-through">₺{product.regular_price}</span>
+                  <span className="rounded-full bg-[#f8ecea] px-2.5 py-1 text-xs font-semibold text-[#8c332b]">%{discountPercentage} indirim</span>
                 </div>
               ) : (
-                <div className="text-4xl font-bold text-[#1E3A5F]">₺{product.regular_price || '0'}</div>
+                <div className="text-3xl font-semibold tracking-tight text-gray-950 sm:text-4xl">₺{product.regular_price || '0'}</div>
               )}
-              <p className="text-xs text-gray-500 mt-2">KDV Dahil • Ücretsiz Kargo</p>
+              <p className="mt-2 text-xs leading-relaxed text-gray-500">Teslimat ve ödeme seçeneklerini sipariş öncesinde satıcıyla teyit edin.</p>
             </div>
 
             {product.short_description && (
-              <div className="border-l-4 border-[#E8B04B] pl-4 py-1 bg-yellow-50/50 rounded-r-lg">
-                <p className="text-gray-700 text-base leading-relaxed">{product.short_description}</p>
-              </div>
+              <p className="text-sm leading-relaxed text-gray-600 sm:text-base">{product.short_description}</p>
             )}
 
             {product.track_inventory && (
-              <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${product.stock_status === 'in_stock' ? 'bg-green-500' : product.stock_status === 'out_of_stock' ? 'bg-red-500' : 'bg-yellow-500'}`} />
-                <span className={`text-sm font-medium ${product.stock_status === 'in_stock' ? 'text-green-700' : product.stock_status === 'out_of_stock' ? 'text-red-700' : 'text-yellow-700'}`}>
-                  {product.stock_status === 'in_stock' && `Stokta Var (${product.stock_quantity} adet)`}
-                  {product.stock_status === 'out_of_stock' && 'Tükendi'}
+              <div className="flex items-center gap-2.5 rounded-xl bg-gray-50 px-3.5 py-3">
+                <span className={`h-2 w-2 rounded-full ${product.stock_status === 'in_stock' ? 'bg-emerald-500' : product.stock_status === 'out_of_stock' ? 'bg-red-500' : 'bg-amber-500'}`} />
+                <span className={`text-sm font-medium ${product.stock_status === 'in_stock' ? 'text-emerald-800' : product.stock_status === 'out_of_stock' ? 'text-red-800' : 'text-amber-800'}`}>
+                  {product.stock_status === 'in_stock' && (product.stock_quantity > 0 ? `Stokta · ${product.stock_quantity} adet` : 'Stokta')}
+                  {product.stock_status === 'out_of_stock' && 'Stokta yok · Durumu satıcıya sorun'}
+                  {product.stock_status === 'pre_order' && 'Ön sipariş · Teslimat bilgisini sorun'}
                 </span>
               </div>
             )}
 
             <a 
-              href={`https://wa.me/905314319921?text=${whatsappMessage}`}
+              href={`https://wa.me/905314319921?text=${encodeURIComponent(whatsappMessage)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-4 rounded-xl font-bold hover:from-green-600 hover:to-green-700 transition-all shadow-lg shadow-green-500/30 hover:scale-[1.02]"
+              className="flex items-center justify-center gap-3 rounded-xl bg-[#198754] px-6 py-4 font-semibold text-white shadow-sm transition-colors hover:bg-[#146c43] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#198754]"
             >
               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
@@ -194,27 +200,27 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               <span>WhatsApp ile Sipariş Ver</span>
             </a>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="flex flex-col items-center text-center p-3 bg-white rounded-xl border border-gray-100">
-                <Truck className="w-5 h-5 text-[#1E3A5F] mb-1" />
-                <span className="text-xs font-medium text-gray-700">Hızlı Teslimat</span>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center">
+                <Truck className="h-4 w-4 text-gray-600" />
+                <span className="text-[10px] font-medium leading-tight text-gray-600 sm:text-[11px]">Teslimatı sorun</span>
               </div>
-              <div className="flex flex-col items-center text-center p-3 bg-white rounded-xl border border-gray-100">
-                <Shield className="w-5 h-5 text-[#1E3A5F] mb-1" />
-                <span className="text-xs font-medium text-gray-700">Güvenli Ödeme</span>
+              <div className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center">
+                <Shield className="h-4 w-4 text-gray-600" />
+                <span className="text-[10px] font-medium leading-tight text-gray-600 sm:text-[11px]">Satıcıyla doğrudan iletişim</span>
               </div>
-              <div className="flex flex-col items-center text-center p-3 bg-white rounded-xl border border-gray-100">
-                <RotateCcw className="w-5 h-5 text-[#1E3A5F] mb-1" />
-                <span className="text-xs font-medium text-gray-700">Çalışmazsa 3 Gün İade</span>
+              <div className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center">
+                <RotateCcw className="h-4 w-4 text-gray-600" />
+                <span className="text-[10px] font-medium leading-tight text-gray-600 sm:text-[11px]">İade koşullarını sorun</span>
               </div>
             </div>
           </div>
         </div>
 
         {product.description && (
-          <div className="mt-12 bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <div className="w-1 h-6 bg-[#1E3A5F] rounded-full"></div>
+          <div className="mt-8 rounded-2xl border border-gray-200/80 bg-white p-5 shadow-sm sm:mt-12 sm:p-8">
+            <h2 className="mb-5 flex items-center gap-3 text-xl font-semibold tracking-tight text-gray-950 sm:text-2xl">
+              <span className="h-6 w-1 rounded-full bg-[#1E3A5F]" />
               Ürün Açıklaması
             </h2>
             <div className="prose max-w-none text-gray-700 whitespace-pre-line leading-relaxed">
@@ -223,18 +229,18 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </div>
         )}
 
-        <div className="mt-12 space-y-6">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <div className="w-1 h-6 bg-[#1E3A5F] rounded-full"></div>
+        <div id="reviews" className="mt-9 space-y-5 scroll-mt-28 sm:mt-12">
+          <h2 className="flex items-center gap-3 text-xl font-semibold tracking-tight text-gray-950 sm:text-2xl">
+            <span className="h-6 w-1 rounded-full bg-[#1E3A5F]" />
             Müşteri Değerlendirmeleri
           </h2>
-          <ProductReviewsSection productId={product.id} />
+          <ProductReviewsSection productId={product.id} initialReviews={reviews} />
         </div>
 
         {relatedProducts && relatedProducts.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <div className="w-1 h-6 bg-[#1E3A5F] rounded-full"></div>
+          <div className="mt-9 sm:mt-12">
+            <h2 className="mb-5 flex items-center gap-3 text-xl font-semibold tracking-tight text-gray-950 sm:text-2xl">
+              <span className="h-6 w-1 rounded-full bg-[#1E3A5F]" />
               Benzer Ürünler
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
