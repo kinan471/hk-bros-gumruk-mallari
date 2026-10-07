@@ -2,9 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Truck, Shield, RotateCcw, Star } from 'lucide-react';
+import { ArrowLeft, Truck, Shield, RotateCcw, Star, Zap } from 'lucide-react';
 import ProductReviewsSection from '@/components/products/ProductReviewsSection';
 import ProductGallery from '@/components/products/ProductGallery';
+import ProductFavoriteButton from '@/components/products/ProductFavoriteButton';
 import NextImage from 'next/image';
 
 export const dynamic = 'force-static';
@@ -64,6 +65,10 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     : 0;
 
   const hasDiscount = product.sale_price && product.sale_price < (product.regular_price || 0);
+  const isLowStock = product.track_inventory
+    && product.stock_status === 'in_stock'
+    && product.stock_quantity > 0
+    && product.stock_quantity <= 5;
   const discountPercentage = hasDiscount 
     ? Math.round((1 - (product.sale_price || 0) / (product.regular_price || 1)) * 100) 
     : 0;
@@ -143,7 +148,10 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 )}
                 {product.product_condition && <span className="rounded-full bg-gray-100 px-3 py-1.5 text-[11px] font-medium text-gray-700">{product.product_condition}</span>}
               </div>
-              <h1 className="text-xl font-semibold leading-tight tracking-tight text-gray-950 sm:text-3xl lg:text-[2.5rem]">{product.name}</h1>
+              <div className="flex items-start justify-between gap-3">
+                <h1 className="text-xl font-semibold leading-tight tracking-tight text-gray-950 sm:text-3xl lg:text-[2.5rem]">{product.name}</h1>
+                <ProductFavoriteButton />
+              </div>
               {product.brand && (
                 <p className="flex items-center gap-2 text-sm text-gray-600">
                   <span className="text-gray-400">Marka</span>
@@ -178,13 +186,21 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             )}
 
             {product.track_inventory && (
-              <div className="flex items-center gap-2.5 rounded-xl bg-gray-50 px-3.5 py-3">
-                <span className={`h-2 w-2 rounded-full ${product.stock_status === 'in_stock' ? 'bg-emerald-500' : product.stock_status === 'out_of_stock' ? 'bg-red-500' : 'bg-amber-500'}`} />
-                <span className={`text-sm font-medium ${product.stock_status === 'in_stock' ? 'text-emerald-800' : product.stock_status === 'out_of_stock' ? 'text-red-800' : 'text-amber-800'}`}>
-                  {product.stock_status === 'in_stock' && (product.stock_quantity > 0 ? `Stokta · ${product.stock_quantity} adet` : 'Stokta')}
-                  {product.stock_status === 'out_of_stock' && 'Stokta yok · Durumu satıcıya sorun'}
-                  {product.stock_status === 'pre_order' && 'Ön sipariş · Teslimat bilgisini sorun'}
-                </span>
+              <div className="rounded-xl bg-gray-50 px-3.5 py-3">
+                <div className="flex items-center gap-2.5">
+                  <span className={`h-2 w-2 rounded-full ${product.stock_status === 'in_stock' ? 'bg-emerald-500' : product.stock_status === 'out_of_stock' ? 'bg-red-500' : 'bg-amber-500'}`} />
+                  <span className={`text-sm font-medium ${product.stock_status === 'in_stock' ? 'text-emerald-800' : product.stock_status === 'out_of_stock' ? 'text-red-800' : 'text-amber-800'}`}>
+                    {product.stock_status === 'in_stock' && (product.stock_quantity > 0 ? `Stokta · ${product.stock_quantity} adet` : 'Stokta')}
+                    {product.stock_status === 'out_of_stock' && 'Stokta yok · Durumu satıcıya sorun'}
+                    {product.stock_status === 'pre_order' && 'Ön sipariş · Teslimat bilgisini sorun'}
+                  </span>
+                </div>
+                {isLowStock && (
+                  <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-[#8c332b]">
+                    <Zap className="h-3.5 w-3.5 fill-current" />
+                    Son {product.stock_quantity} ürün
+                  </p>
+                )}
               </div>
             )}
 
