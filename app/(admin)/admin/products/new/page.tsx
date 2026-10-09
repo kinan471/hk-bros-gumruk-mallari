@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { generateSlug } from '@/lib/utils/slug';
+import { revalidatePublicCatalog } from '@/lib/utils/revalidatePublicCatalog';
 import { compressImage } from '@/lib/utils/compressImage';
 import type { Product } from '@/types/database';
 import {
@@ -211,7 +212,10 @@ export default function NewProductPage() {
         if (galleryError) throw galleryError;
       }
 
-      alert('Ürün başarıyla eklendi!');
+      const cacheUpdated = await revalidatePublicCatalog();
+      alert(cacheUpdated
+        ? 'Ürün başarıyla eklendi!'
+        : 'Ürün kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
       router.push('/admin/products');
     } catch (error) {
       console.error('Error saving product:', error);

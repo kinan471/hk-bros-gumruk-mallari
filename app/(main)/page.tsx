@@ -1,10 +1,11 @@
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase/server';
+import { createPublicServerClient } from '@/lib/supabase/public-server';
 import { fetchReviewSummaries } from '@/lib/utils/reviewSummaries';
 import ProductCard from '@/components/products/ProductCard';
 import HeroSlider from '@/components/layout/HeroSlider';
 import Link from 'next/link';
 import { ArrowRight, ChevronRight, Sparkles, Star } from 'lucide-react';
+import { IMAGE_BLUR_DATA_URL } from '@/lib/utils/imagePlaceholder';
 import type { ProductCardProduct } from '@/types/database';
 import type { ReviewSummary } from '@/lib/utils/reviewSummaries';
 
@@ -52,6 +53,7 @@ function ProductRail({ title, subtitle, products, reviewSummaries, icon }: Produ
             <ProductCard
               product={product}
               reviewSummary={reviewSummaries[product.id] ?? { averageRating: 0, reviewCount: 0 }}
+              preload={false}
             />
           </div>
         ))}
@@ -69,7 +71,7 @@ export const metadata = {
 };
 
 export default async function HomePage() {
-  const supabase = await createClient();
+  const supabase = createPublicServerClient();
 
   const [featuredRes, latestRes, categoriesRes] = await Promise.all([
     supabase
@@ -140,7 +142,9 @@ export default async function HomePage() {
                           src={imageUrl}
                           alt={category.name}
                           fill
-                          sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 150px"
+                          sizes="(max-width: 640px) 155px, 185px"
+                          placeholder="blur"
+                          blurDataURL={IMAGE_BLUR_DATA_URL}
                           className="object-cover transition duration-500 group-hover:scale-105"
                         />
                       ) : (

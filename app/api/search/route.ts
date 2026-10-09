@@ -4,17 +4,21 @@ import { fetchReviewSummaries } from '@/lib/utils/reviewSummaries';
 
 type SearchMode = 'suggestions' | 'results';
 
+function createSearchClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase public environment variables are required for search.');
+  }
+
+  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 const getSearchData = unstable_cache(
   async (term: string, mode: SearchMode) => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Supabase public environment variables are required for search.');
-    }
-
-    const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    });
+    const supabase = createSearchClient();
     const isSaleSearch = mode === 'results' && ['indirim', 'sale', 'discount'].includes(term);
     let productQuery = supabase
       .from('products')
@@ -51,7 +55,7 @@ const getSearchData = unstable_cache(
     };
   },
   ['product-search'],
-  { revalidate: 60 }
+  { revalidate: 60, tags: ['product-search'] }
 );
 
 export async function GET(request: Request) {

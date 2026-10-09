@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Zap, Shield } from 'lucide-react';
+import { IMAGE_BLUR_DATA_URL } from '@/lib/utils/imagePlaceholder';
 
 interface ProductGalleryProps {
   mainImage: string;
@@ -50,9 +51,10 @@ export default function ProductGallery({
           alt={`${productName} - Görsel ${activeIndex + 1}`}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
-          priority={activeIndex === 0}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
-          quality={85}
+          preload={activeIndex === 0}
+          placeholder="blur"
+          blurDataURL={IMAGE_BLUR_DATA_URL}
+          sizes="(max-width: 1023px) calc(100vw - 24px), (max-width: 1440px) 50vw, 700px"
         />
         
         {hasDiscount && activeIndex === 0 && (

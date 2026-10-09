@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+import { revalidatePublicCatalog } from '@/lib/utils/revalidatePublicCatalog';
 import { Product, Category } from '@/types/database';
 import {
   Plus, Search, Grid3x3, List, Edit, Trash2,
@@ -56,9 +57,11 @@ export default function AdminProductsPage() {
     mutationFn: async (productId: string) => {
       const { error } = await supabase.from('products').delete().eq('id', productId);
       if (error) throw error;
+      return revalidatePublicCatalog();
     },
-    onSuccess: () => {
+    onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      if (!cacheUpdated) alert('Ürün silindi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
     },
   });
 
@@ -69,9 +72,11 @@ export default function AdminProductsPage() {
         .update({ is_active: !isActive, status: !isActive ? 'published' : 'draft' })
         .eq('id', id);
       if (error) throw error;
+      return revalidatePublicCatalog();
     },
-    onSuccess: () => {
+    onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      if (!cacheUpdated) alert('Durum güncellendi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
     },
   });
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Send, CheckCircle, Loader2, MessageCircle } from 'lucide-react';
+import { STORE_CONTACT } from '@/lib/config/store';
 
 export default function ContactForm() {
   const [formData, setFormData] = useState({
@@ -30,7 +31,7 @@ export default function ContactForm() {
       const messageText = `Yeni İletişim Formu Mesajı:%0A%0AAd: ${formData.name}%0AEmail: ${formData.email}%0ATelefon: ${formData.phone}%0AKonu: ${formData.subject}%0AMesaj: ${formData.message}`;
       
       window.open(
-        `https://wa.me/905314319921?text=${messageText}`,
+        `https://wa.me/${STORE_CONTACT.whatsappNumber}?text=${messageText}`,
         '_blank'
       );
 
@@ -100,7 +101,7 @@ export default function ContactForm() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/10 outline-none transition-all"
-                placeholder="+90 531 431 99 21"
+                placeholder="+90 5XX XXX XX XX"
               />
             </div>
             <div>

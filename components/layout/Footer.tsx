@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
+import { STORE_CONTACT } from '@/lib/config/store';
 
 export default function Footer() {
   return (
@@ -25,7 +26,7 @@ export default function Footer() {
             </p>
             
             <div className="flex gap-3 pt-2">
-              <a href="https://wa.me/905551234567" aria-label="WhatsApp" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#25D366] hover:text-white transition-all">
+              <a href={`https://wa.me/${STORE_CONTACT.whatsappNumber}`} aria-label="WhatsApp" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#25D366] hover:text-white transition-all" target="_blank" rel="noopener noreferrer">
                 <MessageCircle className="w-5 h-5" />
               </a>
             </div>
@@ -45,15 +46,15 @@ export default function Footer() {
             <ul className="space-y-4 text-sm">
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-[#E8B04B] flex-shrink-0 mt-0.5" />
-                <span>İstanbul, Türkiye</span>
+                <span>{STORE_CONTACT.location}</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-[#E8B04B] flex-shrink-0" />
-                <span className="hover:text-white transition-colors">+90 555 123 45 67</span>
+                <a href={`tel:${STORE_CONTACT.phoneE164}`} className="hover:text-white transition-colors">{STORE_CONTACT.phoneDisplay}</a>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-[#E8B04B] flex-shrink-0" />
-                <span className="hover:text-white transition-colors">info@hkbros.com</span>
+                <a href={`mailto:${STORE_CONTACT.email}`} className="hover:text-white transition-colors">{STORE_CONTACT.email}</a>
               </li>
             </ul>
           </div>

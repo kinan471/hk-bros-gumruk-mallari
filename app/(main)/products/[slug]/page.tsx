@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createPublicServerClient } from '@/lib/supabase/public-server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Truck, Shield, RotateCcw, Star } from 'lucide-react';
@@ -7,6 +7,7 @@ import ProductGallery from '@/components/products/ProductGallery';
 import AddToCartButton from '@/components/products/AddToCartButton';
 import ProductCard from '@/components/products/ProductCard';
 import { fetchReviewSummaries } from '@/lib/utils/reviewSummaries';
+import { STORE_RETURN_WINDOW_DAYS, STORE_SHIPPING } from '@/lib/config/store';
 
 export const dynamic = 'force-static';
 export const revalidate = 3600;
@@ -17,7 +18,7 @@ interface ProductDetailPageProps {
 
 export async function generateMetadata({ params }: ProductDetailPageProps) {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicServerClient();
   const { data: product } = await supabase
     .from('products')
     .select('name, short_description')
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: ProductDetailPageProps) {
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicServerClient();
 
   const { data: product, error } = await supabase
     .from('products')
@@ -191,7 +192,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               ) : (
                 <div className="text-4xl font-bold text-[#1E3A5F]">₺{product.regular_price || '0'}</div>
               )}
-              <p className="text-xs text-gray-500 mt-2">KDV Dahil • Ücretsiz Kargo</p>
+              <p className="text-xs text-gray-500 mt-2">KDV Dahil • {STORE_SHIPPING.freeShippingMinimum.toLocaleString('tr-TR')} TL ve üzeri kargo ücretsiz</p>
             </div>
 
             {product.short_description && (
@@ -223,7 +224,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               </div>
               <div className="flex flex-col items-center text-center p-3 bg-white rounded-xl border border-gray-100">
                 <RotateCcw className="w-5 h-5 text-[#1E3A5F] mb-1" />
-                <span className="text-xs font-medium text-gray-700">3 Gün İçinde İade</span>
+                <span className="text-xs font-medium text-gray-700">{STORE_RETURN_WINDOW_DAYS} Gün İçinde İade</span>
               </div>
             </div>
           </div>

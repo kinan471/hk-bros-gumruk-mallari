@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { calculateShippingCost } from '@/lib/config/store';
 
 interface CheckoutItem {
   id: string;
@@ -150,7 +151,7 @@ export async function POST(request: Request) {
     0
   );
   const subtotal = subtotalCents / 100;
-  const shippingCost = subtotal >= 1000 ? 0 : 50;
+  const shippingCost = calculateShippingCost(subtotal);
   const total = subtotal + shippingCost;
   const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 

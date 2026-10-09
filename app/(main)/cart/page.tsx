@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/lib/cart/CartContext';
+import { calculateShippingCost, STORE_CONTACT, STORE_SHIPPING } from '@/lib/config/store';
 import {
   ShoppingCart, Trash2, Plus, Minus,
   ArrowLeft, MessageCircle, ShoppingBag,
@@ -70,7 +71,7 @@ export default function CartPage() {
   const [whatsappUrl, setWhatsappUrl] = useState('');
   const [confirmedTotal, setConfirmedTotal] = useState<number | null>(null);
 
-  const shippingCost = totalPrice >= 1000 ? 0 : 50;
+  const shippingCost = calculateShippingCost(totalPrice);
   const finalTotal = totalPrice + shippingCost;
 
   const handleCheckout = async () => {
@@ -146,7 +147,7 @@ export default function CartPage() {
       message += `\n*GENEL TOPLAM: ₺${result.total.toFixed(2)}*\n`;
 
       const encodedMessage = encodeURIComponent(message);
-      const whatsappUrl = `https://wa.me/905314319921?text=${encodedMessage}`;
+      const whatsappUrl = `https://wa.me/${STORE_CONTACT.whatsappNumber}?text=${encodedMessage}`;
 
       setWhatsappUrl(whatsappUrl);
       setConfirmedTotal(result.total);
@@ -350,7 +351,7 @@ export default function CartPage() {
                 </div>
                 {shippingCost > 0 && (
                   <p className="text-xs text-emerald-600 bg-emerald-50 p-2 rounded-lg">
-                    ₺{(1000 - totalPrice).toFixed(2)} daha ekleyin, kargo ücretsiz olsun!
+                    ₺{(STORE_SHIPPING.freeShippingMinimum - totalPrice).toFixed(2)} daha ekleyin, kargo ücretsiz olsun!
                   </p>
                 )}
               </div>

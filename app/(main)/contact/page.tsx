@@ -4,6 +4,7 @@ import {
   Phone, Mail, MapPin, MessageCircle, Clock, 
   Send
 } from 'lucide-react';
+import { STORE_BUSINESS_HOURS, STORE_CONTACT } from '@/lib/config/store';
 
 export const metadata = {
   title: 'İletişim - HK BROS GÜMRÜK MALLARI',
@@ -15,42 +16,36 @@ export default function ContactPage() {
     {
       icon: Phone,
       title: 'Telefon',
-      value: '+90 531 431 99 21',
-      link: 'tel:+905314319921',
+      value: STORE_CONTACT.phoneDisplay,
+      link: `tel:${STORE_CONTACT.phoneE164}`,
       color: 'from-blue-500 to-blue-600',
-      desc: 'Pazartesi - Cumartesi, 09:00 - 20:00'
+      desc: 'Çalışma saatleri içinde'
     },
     {
       icon: MessageCircle,
       title: 'WhatsApp',
       value: 'Hızlı Mesaj',
-      link: 'https://wa.me/905314319921',
+      link: `https://wa.me/${STORE_CONTACT.whatsappNumber}`,
       color: 'from-green-500 to-green-600',
-      desc: '7/24 WhatsApp desteği',
+      desc: 'Mesaj bırakın, çalışma saatlerinde dönüş yapalım',
       external: true
     },
     {
       icon: Mail,
       title: 'E-posta',
-      value: 'info@hkbros.com',
-      link: 'mailto:info@hkbros.com',
+      value: STORE_CONTACT.email,
+      link: `mailto:${STORE_CONTACT.email}`,
       color: 'from-purple-500 to-purple-600',
-      desc: '24 saat içinde dönüş'
+      desc: 'Çalışma saatlerinde dönüş'
     },
     {
       icon: MapPin,
       title: 'Adres',
-      value: 'İstanbul, Türkiye',
+      value: STORE_CONTACT.location,
       link: '#map',
       color: 'from-orange-500 to-orange-600',
       desc: 'Merkez ofisimiz'
     },
-  ];
-
-  const businessHours = [
-    { day: 'Pazartesi - Cuma', hours: '09:00 - 20:00' },
-    { day: 'Cumartesi', hours: '10:00 - 18:00' },
-    { day: 'Pazar', hours: 'Kapalı' },
   ];
 
   return (
@@ -119,7 +114,7 @@ export default function ContactPage() {
                 <h3 className="font-bold text-gray-900">Çalışma Saatleri</h3>
               </div>
               <div className="space-y-3">
-                {businessHours.map((item, index) => (
+                {STORE_BUSINESS_HOURS.map((item, index) => (
                   <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                     <span className="text-sm text-gray-700">{item.day}</span>
                     <span className={`text-sm font-semibold ${
@@ -138,10 +133,10 @@ export default function ContactPage() {
                 <h3 className="font-bold text-lg">WhatsApp Hattı</h3>
               </div>
               <p className="text-white/90 text-sm mb-4">
-                Anlık destek için WhatsApp&apos;tan bize yazın. Genellikle 5 dakika içinde dönüş yapıyoruz.
+                WhatsApp üzerinden dilediğiniz zaman mesaj bırakabilirsiniz. Çalışma saatleri içinde dönüş yapıyoruz.
               </p>
               <a
-                href="https://wa.me/905314319921"
+                href={`https://wa.me/${STORE_CONTACT.whatsappNumber}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-white text-green-600 px-4 py-2.5 rounded-xl font-bold hover:bg-gray-100 transition-colors text-sm"
@@ -162,7 +157,7 @@ export default function ContactPage() {
               <MapPin className="w-5 h-5 text-[#1E3A5F]" />
               <h3 className="font-bold text-gray-900 text-lg">Konumumuz</h3>
             </div>
-            <p className="text-sm text-gray-600 mt-1">İstanbul, Türkiye</p>
+            <p className="text-sm text-gray-600 mt-1">{STORE_CONTACT.location}</p>
           </div>
           <div className="aspect-[16/9] bg-gray-100">
             <iframe

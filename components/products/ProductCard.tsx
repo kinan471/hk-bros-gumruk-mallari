@@ -1,24 +1,25 @@
 'use client';
-import { useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import Image from 'next/image';
 import { Heart, Star, Sparkles, BadgePercent, Zap } from 'lucide-react';
 import type { ProductCardProduct } from '@/types/database';
 import type { ReviewSummary } from '@/lib/utils/reviewSummaries';
 import { getFavoriteIds, saveFavoriteIds, subscribeToFavorites } from '@/lib/utils/wishlist';
 import Link from 'next/link';
+import { IMAGE_BLUR_DATA_URL } from '@/lib/utils/imagePlaceholder';
 
 interface ProductCardProps {
   product: ProductCardProduct;
   reviewSummary: ReviewSummary;
+  preload?: boolean;
 }
 
-export default function ProductCard({ product, reviewSummary }: ProductCardProps) {
+export default function ProductCard({ product, reviewSummary, preload = false }: ProductCardProps) {
   const isFavorite = useSyncExternalStore(
     subscribeToFavorites,
     () => getFavoriteIds().includes(product.id),
     () => false
   );
-  const [imageLoaded, setImageLoaded] = useState(false);
   const avgRating = reviewSummary.averageRating;
   const reviewCount = reviewSummary.reviewCount;
 
@@ -70,17 +71,15 @@ export default function ProductCard({ product, reviewSummary }: ProductCardProps
       className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:border-[#9bbcb6] hover:shadow-md"
     >
       <div className="relative aspect-square overflow-hidden bg-white">
-        {!imageLoaded && (
-          <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
-        )}
         <Image
           src={product.main_image}
           alt={product.name}
           fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className={`object-cover transition-transform duration-300 group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-          loading="lazy"
-          onLoadingComplete={() => setImageLoaded(true)}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 230px"
+          preload={preload}
+          placeholder="blur"
+          blurDataURL={IMAGE_BLUR_DATA_URL}
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
         <div className="absolute top-3 left-3 z-10 flex max-w-[calc(100%-4.5rem)] flex-col items-start gap-1.5">
           {product.is_featured && (

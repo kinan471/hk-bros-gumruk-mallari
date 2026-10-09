@@ -20,7 +20,7 @@ interface ReviewsListProps {
 }
 
 export default function ReviewsList({ productId, initialReviews, refreshKey }: ReviewsListProps) {
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const [reviews, setReviews] = useState(initialReviews);
 
   useEffect(() => {

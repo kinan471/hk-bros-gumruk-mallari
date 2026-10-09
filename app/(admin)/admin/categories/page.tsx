@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { generateSlug } from '@/lib/utils/slug';
+import { revalidatePublicCatalog } from '@/lib/utils/revalidatePublicCatalog';
 import type { Category } from '@/types/database';
 import {
   Plus, Edit, Trash2, Eye, EyeOff,
@@ -49,10 +50,12 @@ export default function AdminCategoriesPage() {
           display_order: 0,
         }]);
       if (error) throw error;
+      return revalidatePublicCatalog();
     },
-    onSuccess: () => {
+    onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
       setNewCategoryName('');
+      if (!cacheUpdated) alert('Kategori kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
     },
   });
 
@@ -68,11 +71,13 @@ export default function AdminCategoriesPage() {
           display_order: 0,
         }]);
       if (error) throw error;
+      return revalidatePublicCatalog();
     },
-    onSuccess: () => {
+    onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
       setNewSubCategoryName('');
       setAddingSubTo(null);
+      if (!cacheUpdated) alert('Alt kategori kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
     },
   });
 
@@ -83,10 +88,12 @@ export default function AdminCategoriesPage() {
         .update({ name, slug: generateSlug(name) })
         .eq('id', id);
       if (error) throw error;
+      return revalidatePublicCatalog();
     },
-    onSuccess: () => {
+    onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
       setEditingId(null);
+      if (!cacheUpdated) alert('Kategori güncellendi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
     },
   });
 
@@ -94,9 +101,11 @@ export default function AdminCategoriesPage() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('categories').delete().eq('id', id);
       if (error) throw error;
+      return revalidatePublicCatalog();
     },
-    onSuccess: () => {
+    onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      if (!cacheUpdated) alert('Kategori silindi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
     },
   });
 
@@ -107,9 +116,11 @@ export default function AdminCategoriesPage() {
         .update({ is_active: !isActive })
         .eq('id', id);
       if (error) throw error;
+      return revalidatePublicCatalog();
     },
-    onSuccess: () => {
+    onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      if (!cacheUpdated) alert('Kategori durumu güncellendi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
     },
   });
 

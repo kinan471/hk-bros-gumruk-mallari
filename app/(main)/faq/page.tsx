@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowLeft, HelpCircle, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
+import { STORE_CONTACT, STORE_RETURN_WINDOW_DAYS, STORE_SHIPPING } from '@/lib/config/store';
 
 const faqs = [
   {
@@ -14,24 +15,24 @@ const faqs = [
     category: "Sipariş ve Kargo",
     icon: <Truck className="w-6 h-6 text-[#1E3A5F]" />,
     items: [
-      { q: "Kargo ücretli mi?", a: "250 TL ve üzeri tüm siparişlerde kargo tamamen ücretsizdir. 250 TL altı siparişlerde standart kargo ücreti uygulanır." },
-      { q: "Siparişim kaç günde elime ulaşır?", a: "Siparişleriniz onaylandıktan sonra 1 iş günü içinde kargoya verilir. Türkiye geneline ortalama 2-4 iş günü içinde teslim edilir." }
+      { q: "Kargo ücretli mi?", a: `${STORE_SHIPPING.freeShippingMinimum.toLocaleString('tr-TR')} TL ve üzeri siparişlerde kargo ücretsizdir. Bu tutarın altındaki siparişlerde ${STORE_SHIPPING.standardShippingFee} TL standart kargo ücreti uygulanır.` },
+      { q: "Siparişim kaç günde elime ulaşır?", a: `Siparişiniz onaylandıktan sonra ${STORE_SHIPPING.dispatchTime} içinde kargoya verilir. Türkiye geneli tahmini teslimat süresi ${STORE_SHIPPING.estimatedDelivery}.` }
     ]
   },
   {
     category: "Garanti ve İade",
     icon: <RotateCcw className="w-6 h-6 text-[#1E3A5F]" />,
     items: [
-      { q: "Ürünlerde garanti var mı?", a: "Evet, elektronik ürünlerde distribütör veya satıcı garantisi bulunmaktadır. Ürün sayfasında garanti süresi detaylı olarak belirtilmiştir." },
-      { q: "İade koşullarınız nelerdir?", a: "İade yalnızca ürün çalışmıyorsa kabul edilir. Ürünü teslim aldığınız tarihten itibaren 3 gün içinde bizimle iletişime geçebilirsiniz." }
+      { q: "Ürünlerde garanti var mı?", a: "Garanti bilgisi ürün sayfasında belirtilir. Ürüne özel garanti süresi görünmüyorsa sipariş vermeden önce WhatsApp üzerinden bilgi alabilirsiniz." },
+      { q: "İade koşullarınız nelerdir?", a: `Ürünü teslim aldığınız tarihten itibaren ${STORE_RETURN_WINDOW_DAYS} gün içinde iade talebi oluşturmak için bizimle iletişime geçebilirsiniz.` }
     ]
   },
   {
     category: "Güvenlik ve Ödeme",
     icon: <ShieldCheck className="w-6 h-6 text-[#1E3A5F]" />,
     items: [
-      { q: "Ödemem güvenli mi?", a: "Evet, tüm ödemeler 256-bit SSL sertifikası ile korunmaktadır. Kredi kartı bilgileriniz sistemimizde saklanmaz, altyapımız 3D Secure ile desteklenmektedir." },
-      { q: "Fatura veriliyor mu?", a: "Evet, yasal bir işletme olduğumuz için her siparişinizde e-Fatura tarafınıza iletilir." }
+      { q: "Ödeme nasıl yapılır?", a: "Siparişinizi web sitesi üzerinden oluşturabilirsiniz. Ödeme yöntemi ve sipariş onayı WhatsApp üzerinden sizinle ayrıca paylaşılır; bu sitede kredi kartı ödeme işlemi yapılmamaktadır." },
+      { q: "Fatura hakkında nasıl bilgi alabilirim?", a: "Siparişinize ait fatura bilgileri için WhatsApp üzerinden bizimle iletişime geçebilirsiniz." }
     ]
   }
 ];
@@ -75,7 +76,7 @@ export default function FAQPage() {
         <div className="mt-12 bg-gradient-to-r from-[#1E3A5F] to-[#4A90A4] rounded-2xl p-8 text-center text-white">
           <h3 className="text-2xl font-bold mb-3">Daha fazla yardıma mı ihtiyacınız var?</h3>
           <p className="text-white/90 mb-6">Müşteri hizmetlerimiz size yardımcı olmaktan mutluluk duyacaktır.</p>
-          <a href="https://wa.me/905314319921" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-white text-[#1E3A5F] px-6 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors">
+          <a href={`https://wa.me/${STORE_CONTACT.whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-white text-[#1E3A5F] px-6 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors">
             WhatsApp ile İletişime Geçin
           </a>
         </div>

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createPublicServerClient } from '@/lib/supabase/public-server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/products/ProductCard';
@@ -20,7 +20,7 @@ interface CategoryPageProps {
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicServerClient();
 
   const { data: category } = await supabase
     .from('categories')
@@ -118,11 +118,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
       {products && products.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 sm:gap-4">
-          {products.map((product) => (
+          {products.map((product, index) => (
             <ProductCard
               key={product.id}
               product={product}
               reviewSummary={reviewSummaries[product.id] ?? { averageRating: 0, reviewCount: 0 }}
+              preload={index === 0}
             />
           ))}
         </div>

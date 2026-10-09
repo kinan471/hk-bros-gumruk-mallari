@@ -4,6 +4,7 @@ import { useCart } from '@/lib/cart/CartContext';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { STORE_SHIPPING } from '@/lib/config/store';
 
 export default function MiniCart() {
   const router = useRouter();
@@ -135,9 +136,9 @@ export default function MiniCart() {
               <span className="text-xl font-bold text-[#1E3A5F]">₺{totalPrice.toFixed(2)}</span>
             </div>
 
-            {totalPrice < 1000 && (
+            {totalPrice < STORE_SHIPPING.freeShippingMinimum && (
               <p className="text-xs text-emerald-600 bg-emerald-50 p-2 rounded-lg text-center">
-                ₺{(1000 - totalPrice).toFixed(2)} daha ekleyin, kargo ücretsiz olsun!
+                ₺{(STORE_SHIPPING.freeShippingMinimum - totalPrice).toFixed(2)} daha ekleyin, kargo ücretsiz olsun!
               </p>
             )}
 

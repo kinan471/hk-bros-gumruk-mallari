@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowLeft, ShieldCheck, Truck, RotateCcw, MessageCircle, Clock, MapPin } from 'lucide-react';
+import { STORE_BUSINESS_HOURS, STORE_CONTACT, STORE_RETURN_WINDOW_DAYS, STORE_SHIPPING } from '@/lib/config/store';
 
 export const metadata = { title: 'Hakkımızda - HK BROS GÜMRÜK MALLARI' };
 
@@ -41,12 +42,12 @@ export default function AboutPage() {
                 <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
                   <Truck className="w-10 h-10 text-[#1E3A5F] mb-4" />
                   <h3 className="font-bold text-gray-900 mb-2">Hızlı ve Güvenli Kargo</h3>
-                  <p className="text-sm text-gray-600">Siparişleriniz 1 iş günü içinde kargoya verilir ve sigortalı olarak gönderilir.</p>
+                  <p className="text-sm text-gray-600">Siparişiniz onaylandıktan sonra {STORE_SHIPPING.dispatchTime} içinde kargoya verilir. Tahmini teslimat süresi {STORE_SHIPPING.estimatedDelivery}.</p>
                 </div>
                 <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
                   <RotateCcw className="w-10 h-10 text-[#1E3A5F] mb-4" />
-                  <h3 className="font-bold text-gray-900 mb-2">Ürün Çalışmazsa İade</h3>
-                  <p className="text-sm text-gray-600">Ürün çalışmıyorsa, teslim aldığınız tarihten itibaren 3 gün içinde iade edebilirsiniz.</p>
+                  <h3 className="font-bold text-gray-900 mb-2">{STORE_RETURN_WINDOW_DAYS} Gün İçinde İade</h3>
+                  <p className="text-sm text-gray-600">Teslim aldığınız tarihten itibaren {STORE_RETURN_WINDOW_DAYS} gün içinde iade talebi oluşturmak için bizimle iletişime geçebilirsiniz.</p>
                 </div>
               </div>
             </div>
@@ -59,16 +60,16 @@ export default function AboutPage() {
                     <MessageCircle className="w-6 h-6 text-[#E8B04B] flex-shrink-0 mt-1" />
                     <div>
                       <p className="font-semibold">WhatsApp Destek</p>
-                      <p className="text-white/80 text-sm">7/24 mesaj bırakabilirsiniz, en kısa sürede dönüş yapıyoruz.</p>
+                      <p className="text-white/80 text-sm">Dilediğiniz zaman mesaj bırakabilirsiniz; çalışma saatleri içinde dönüş yapıyoruz.</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Clock className="w-6 h-6 text-[#E8B04B] flex-shrink-0 mt-1" />
                     <div>
                       <p className="font-semibold">Müşteri Hizmetleri</p>
-                      <p className="text-white/80 text-sm">Pazartesi - Cuma: 09:00 - 20:00</p>
-                      <p className="text-white/80 text-sm">Cumartesi: 10:00 - 18:00</p>
-                      <p className="text-white/80 text-sm">Pazar: Kapalı</p>
+                      {STORE_BUSINESS_HOURS.map((item) => (
+                        <p key={item.day} className="text-white/80 text-sm">{item.day}: {item.hours}</p>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -76,8 +77,8 @@ export default function AboutPage() {
                   <MapPin className="w-6 h-6 text-[#E8B04B] flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-semibold">Merkez Ofis</p>
-                    <p className="text-white/80 text-sm">İstanbul, Türkiye</p>
-                    <p className="text-white/80 text-sm mt-2">E-posta: info@hkbros.com</p>
+                    <p className="text-white/80 text-sm">{STORE_CONTACT.location}</p>
+                    <p className="text-white/80 text-sm mt-2">E-posta: {STORE_CONTACT.email}</p>
                   </div>
                 </div>
               </div>

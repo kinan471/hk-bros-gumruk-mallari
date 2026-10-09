@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   images: {
+    formats: ['image/avif', 'image/webp'],
+    qualities: [75],
     remotePatterns: [
       {
         protocol: 'https',

@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import NextImage from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { generateSlug } from '@/lib/utils/slug';
+import { revalidatePublicCatalog } from '@/lib/utils/revalidatePublicCatalog';
 import { compressImage } from '@/lib/utils/compressImage';
 import type { Product } from '@/types/database';
 import {
@@ -367,7 +368,10 @@ export default function EditProductPage() {
         if (galleryError) throw galleryError;
       }
 
-      alert('Ürün başarıyla güncellendi!');
+      const cacheUpdated = await revalidatePublicCatalog();
+      alert(cacheUpdated
+        ? 'Ürün başarıyla güncellendi!'
+        : 'Ürün kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
       router.push('/admin/products');
     } catch (error) {
       console.error('Error updating product:', error);

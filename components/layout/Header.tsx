@@ -26,7 +26,7 @@ type SearchSuggestion = ProductCardProduct & {
 
 export default function Header() {
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   const [categories, setCategories] = useState<NavigationCategory[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -72,9 +72,20 @@ export default function Header() {
     };
     void fetchCategories();
 
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    let scrollFrame = 0;
+    const handleScroll = () => {
+      if (scrollFrame) return;
+      scrollFrame = window.requestAnimationFrame(() => {
+        const nextIsScrolled = window.scrollY > 20;
+        setIsScrolled((current) => current === nextIsScrolled ? current : nextIsScrolled);
+        scrollFrame = 0;
+      });
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
+    };
   }, [supabase]);
 
   useEffect(() => () => {
