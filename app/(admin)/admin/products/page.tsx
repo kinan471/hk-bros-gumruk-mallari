@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { Product, Category } from '@/types/database';
-import Image from 'next/image';
 import {
   Plus, Search, Grid3x3, List, Edit, Trash2,
   Eye, EyeOff, Package, AlertTriangle,
@@ -15,26 +15,6 @@ import Link from 'next/link';
 type ViewMode = 'grid' | 'list';
 type StatusFilter = 'all' | 'published' | 'draft';
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
-type AdminProduct = Pick<
-  Product,
-  | 'id'
-  | 'name'
-  | 'slug'
-  | 'main_image'
-  | 'status'
-  | 'is_active'
-  | 'stock_quantity'
-  | 'stock_status'
-  | 'sale_price'
-  | 'regular_price'
-  | 'created_at'
-  | 'category_id'
-  | 'sku'
-  | 'brand'
-  | 'product_condition'
-> & {
-  categories: { name: string; slug: string }[] | null;
-};
 
 export default function AdminProductsPage() {
   const queryClient = useQueryClient();
@@ -52,19 +32,19 @@ export default function AdminProductsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, slug, main_image, status, is_active, stock_quantity, stock_status, sale_price, regular_price, created_at, category_id, sku, brand, product_condition, categories(name, slug)')
+        .select('*, categories(name, slug)')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as AdminProduct[];
+      return data as Product[];
     },
   });
 
   const { data: categories } = useQuery({
     queryKey: ['admin-categories'],
-    queryFn: async (): Promise<Category[]> => {
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name, slug, description, parent_id, image_url, display_order, is_active, created_at, updated_at')
+        .select('*')
         .eq('is_active', true)
         .order('display_order');
       if (error) throw error;
@@ -154,7 +134,6 @@ export default function AdminProductsPage() {
 
   return (
     <div className="p-6 sm:p-8 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Ürünler</h1>
@@ -171,7 +150,6 @@ export default function AdminProductsPage() {
         </Link>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-3">
@@ -219,7 +197,6 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="relative flex-1">
@@ -295,7 +272,6 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      {/* Products Display */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-12 h-12 animate-spin text-[#1E3A5F]" />
@@ -325,7 +301,7 @@ export default function AdminProductsPage() {
                   src={product.main_image}
                   alt={product.name}
                   fill
-                  sizes="(max-width: 640px) 100vw, 33vw"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   className="object-cover"
                 />
                 <div className="absolute top-2 left-2 flex flex-col gap-1">
@@ -414,6 +390,7 @@ export default function AdminProductsPage() {
                           alt={product.name}
                           width={48}
                           height={48}
+                          sizes="48px"
                           className="w-12 h-12 rounded-lg object-cover"
                         />
                         <div>
@@ -427,7 +404,7 @@ export default function AdminProductsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 text-sm text-gray-600">{product.categories?.[0]?.name || '-'}</td>
+                    <td className="p-4 text-sm text-gray-600">{product.categories?.name || '-'}</td>
                     <td className="p-4">
                       <div>
                         <p className="font-bold text-[#1E3A5F]">₺{product.sale_price || product.regular_price || 0}</p>

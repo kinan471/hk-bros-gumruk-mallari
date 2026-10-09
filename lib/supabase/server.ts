@@ -15,12 +15,18 @@ export async function createClient() {
         set(name: string, value: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value, ...options });
-          } catch {}
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('Cookies can only be modified')) return;
+            throw error;
+          }
         },
         remove(name: string, options: CookieOptions) {
           try {
             cookieStore.set({ name, value: '', ...options });
-          } catch {}
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('Cookies can only be modified')) return;
+            throw error;
+          }
         },
       },
     }

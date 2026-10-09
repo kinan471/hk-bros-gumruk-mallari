@@ -37,12 +37,7 @@ export async function proxy(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!session) {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-
-    const userRole = session.user?.user_metadata?.role;
-    if (userRole !== 'admin') {
+    if (!session || session.user?.user_metadata?.role !== 'admin') {
       return NextResponse.redirect(new URL('/login', request.url));
     }
   }

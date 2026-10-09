@@ -1,23 +1,36 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Menu, X, User, Heart, Loader2 } from 'lucide-react';
-import type { Product } from '@/types/database';
+import {
+  Search,
+  Menu,
+  X,
+  User,
+  Heart,
+  Loader2,
+  ChevronRight,
+  ChevronDown,
+  ShoppingBag,
+} from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import type { Category, ProductCardProduct } from '@/types/database';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import CartIcon from '@/components/layout/CartIcon';
 
-type SearchSuggestion = Pick<
-  Product,
-  'id' | 'name' | 'slug' | 'main_image' | 'regular_price' | 'sale_price' | 'brand' | 'tags'
-> & {
-  categories: { name: string; slug: string }[] | null;
+type NavigationCategory = Pick<Category, 'id' | 'name' | 'slug' | 'parent_id'>;
+type SearchSuggestion = ProductCardProduct & {
+  categories: { name: string; slug: string } | null;
 };
 
 export default function Header() {
   const router = useRouter();
+  const supabase = createClient();
 
+  const [categories, setCategories] = useState<NavigationCategory[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [expandedMobileCategory, setExpandedMobileCategory] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,12 +53,50 @@ export default function Header() {
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const mobileDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const searchRequestRef = useRef(0);
+  const mobileSearchRequestRef = useRef(0);
 
   useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('id, name, slug, parent_id')
+          .eq('is_active', true)
+          .order('display_order');
+        if (error) throw error;
+        setCategories(data ?? []);
+      } catch (error) {
+        console.error('Kategori listesi yüklenemedi:', error);
+      }
+    };
+    void fetchCategories();
+
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, [supabase]);
+
+  useEffect(() => () => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    if (mobileDebounceTimerRef.current) clearTimeout(mobileDebounceTimerRef.current);
   }, []);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMenuOpen(false);
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isMenuOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -84,13 +135,30 @@ export default function Header() {
   }, []);
 
   const performSearch = useCallback(async (query: string, isMobile: boolean = false) => {
+    const requestRef = isMobile ? mobileSearchRequestRef : searchRequestRef;
+    const requestId = ++requestRef.current;
+
+    if (!query.trim()) {
+      if (isMobile) {
+        setMobileSearchResults([]);
+        setMobileIsDropdownOpen(false);
+        setMobileIsSearching(false);
+      } else {
+        setSearchResults([]);
+        setIsDropdownOpen(false);
+        setIsSearching(false);
+      }
+      return;
+    }
     if (query.trim().length < 2) {
       if (isMobile) {
         setMobileSearchResults([]);
         setMobileIsDropdownOpen(false);
+        setMobileIsSearching(false);
       } else {
         setSearchResults([]);
         setIsDropdownOpen(false);
+        setIsSearching(false);
       }
       return;
     }
@@ -100,53 +168,43 @@ export default function Header() {
     setSelectedIndex(-1);
 
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`);
+      const response = await fetch(
+        `/api/search?q=${encodeURIComponent(query.trim())}&mode=suggestions`
+      );
       if (!response.ok) throw new Error(`Search request failed with status ${response.status}.`);
-      const payload: unknown = await response.json();
-      if (!payload || typeof payload !== 'object' || !('results' in payload) || !Array.isArray(payload.results)) {
-        throw new Error('Search response was invalid.');
-      }
+      const payload = await response.json() as { results: SearchSuggestion[] };
+      if (requestId !== requestRef.current) return;
 
-      const filteredResults = payload.results as SearchSuggestion[];
-      const lowerQuery = query.toLowerCase();
-      if (lowerQuery.length > 0) {
-        const tagMatches = filteredResults.filter(
-          (product) => product.tags?.some((tag: string) => tag.toLowerCase().includes(lowerQuery))
-        );
-        const existingIds = new Set(filteredResults.map((product) => product.id));
-        tagMatches.forEach((product) => {
-          if (!existingIds.has(product.id)) {
-            filteredResults.push(product);
-            existingIds.add(product.id);
-          }
-        });
-      }
-
-      const finalResults = filteredResults.slice(0, 6);
       if (isMobile) {
-        setMobileSearchResults(finalResults);
+        setMobileSearchResults(payload.results);
         setMobileIsDropdownOpen(true);
       } else {
-        setSearchResults(finalResults);
+        setSearchResults(payload.results);
         setIsDropdownOpen(true);
       }
     } catch (error) {
-      console.error('Arama hatası:', error);
-      if (isMobile) setMobileSearchResults([]);
-      else setSearchResults([]);
+      if (requestId === requestRef.current) {
+        console.error('Arama hatası:', error);
+        if (isMobile) setMobileSearchResults([]);
+        else setSearchResults([]);
+      }
     } finally {
-      if (isMobile) setMobileIsSearching(false);
-      else setIsSearching(false);
+      if (requestId === requestRef.current) {
+        if (isMobile) setMobileIsSearching(false);
+        else setIsSearching(false);
+      }
     }
   }, []);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
+    searchRequestRef.current += 1;
+    setIsSearching(false);
 
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
 
-    if (value.trim().length < 2) {
+    if (value.trim().length === 0) {
       setSearchResults([]);
       setIsDropdownOpen(false);
       return;
@@ -158,10 +216,12 @@ export default function Header() {
   const handleMobileSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setMobileSearchQuery(value);
+    mobileSearchRequestRef.current += 1;
+    setMobileIsSearching(false);
 
     if (mobileDebounceTimerRef.current) clearTimeout(mobileDebounceTimerRef.current);
 
-    if (value.trim().length < 2) {
+    if (value.trim().length === 0) {
       setMobileSearchResults([]);
       setMobileIsDropdownOpen(false);
       return;
@@ -264,8 +324,8 @@ export default function Header() {
           {highlightMatch(product.name, isMobile ? mobileSearchQuery : searchQuery)}
         </h4>
         <div className="flex items-center gap-2 mt-1">
-          {product.categories?.[0]?.name && (
-            <span className="text-[10px] sm:text-xs text-gray-500">{product.categories[0].name}</span>
+          {product.categories?.name && (
+            <span className="text-[10px] sm:text-xs text-gray-500">{product.categories.name}</span>
           )}
           {product.brand && (
             <>
@@ -291,42 +351,42 @@ export default function Header() {
     </Link>
   );
 
+  const parentCategories = categories.filter(cat => !cat.parent_id);
+
   return (
-    <header className={`sticky top-0 z-50 border-b border-[#1E3A5F]/10 transition-all duration-300 ${
-      isScrolled ? 'bg-white shadow-lg shadow-[#1E3A5F]/5' : 'bg-white/95 backdrop-blur-sm'
+    <header className={`sticky top-0 z-50 transition-all duration-300 ${
+      isScrolled ? 'bg-white shadow-md' : 'bg-white'
     }`}>
-      <div className="h-1 bg-gradient-to-r from-[#1E3A5F] via-[#4A90A4] to-[#E8B04B]" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-[76px] sm:h-20 gap-4">
-          
-          <Link href="/" className="flex items-center gap-3 group flex-shrink-0" aria-label="HK BROS ana sayfa">
-            <div className="relative w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-xl ring-1 ring-[#E8B04B]/60 shadow-sm flex items-center justify-center overflow-hidden group-hover:shadow-md group-hover:ring-[#E8B04B] transition-all duration-300">
-              <Image src="/logo.png" alt="HK BROS" width={48} height={48} className="w-full h-full object-contain p-1" />
+      <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 gap-4">
+
+          <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
+            <div className="relative w-11 h-11 sm:w-12 sm:h-12 bg-white rounded-lg shadow-md border border-gray-200 flex items-center justify-center overflow-hidden group-hover:shadow-lg transition-all duration-300">
+              <Image src="/logo.png" alt="HK BROS" fill sizes="48px" className="object-contain p-1" />
             </div>
             <div className="leading-tight">
-              <span className="block font-extrabold tracking-wide text-[#1E3A5F]">HK BROS</span>
-              <span className="block text-[9px] sm:text-[10px] font-semibold tracking-[0.16em] text-[#4A90A4]">GÜMRÜK MALLARI</span>
+              <p className="font-bold text-gray-900">HK BROS</p>
+              <p className="text-[10px] text-gray-500">GÜMRÜK MALLARI</p>
             </div>
           </Link>
 
-          <div className="hidden md:flex flex-1 max-w-2xl relative">
+          <div className="hidden md:flex flex-1 max-w-xl relative">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <input
                 ref={searchInputRef}
                 type="text"
                 placeholder="Ürün ara... (örn: samsung, nike, telefon)"
-                maxLength={80}
                 value={searchQuery}
                 onChange={handleSearchChange}
                 onKeyDown={handleKeyDown}
                 onFocus={() => searchResults.length > 0 && setIsDropdownOpen(true)}
-                className="w-full px-5 py-3 pr-12 rounded-full border border-gray-200 focus:border-[#4A90A4] focus:outline-none focus:ring-4 focus:ring-[#4A90A4]/10 transition-all bg-[#F8FAFC] focus:bg-white text-sm"
+                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2.5 pr-14 text-sm transition focus:border-[#1E3A5F] focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]/15"
                 autoComplete="off"
               />
               <button
                 type="submit"
                 aria-label="Arama Yap"
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-[#1E3A5F] text-white hover:bg-[#4A90A4] transition-colors"
+                className="absolute right-0 top-0 flex h-full w-11 items-center justify-center rounded-r-md bg-[#f3c56b] text-[#243746] transition-colors hover:bg-[#ffd77d]"
               >
                 {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               </button>
@@ -379,48 +439,120 @@ export default function Header() {
             )}
           </div>
 
-          <div className="hidden md:flex items-center gap-2 flex-shrink-0">
-            <button aria-label="Favoriler" className="p-2.5 rounded-full border border-gray-100 hover:border-[#E8B04B]/50 hover:bg-[#E8B04B]/10 transition-colors">
-              <Heart className="w-5 h-5 text-[#1E3A5F]" />
-            </button>
-            <button aria-label="Hesabım" className="p-2.5 rounded-full border border-gray-100 hover:border-[#E8B04B]/50 hover:bg-[#E8B04B]/10 transition-colors">
-              <User className="w-5 h-5 text-[#1E3A5F]" />
-            </button>
+          <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+            <Link href="/favorilerim" aria-label="Favoriler" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Heart className="w-5 h-5 text-gray-600" />
+            </Link>
+            <CartIcon />
+            <Link
+              href="/siparis-takip"
+              aria-label="Sipariş Takibi"
+              title="Sipariş Takibi"
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <User className="w-5 h-5 text-gray-600" />
+            </Link>
           </div>
 
           <button
             ref={menuButtonRef}
             aria-label="Menü"
-            className="md:hidden p-2.5 rounded-xl border border-[#1E3A5F]/10 text-[#1E3A5F] hover:bg-[#1E3A5F]/5 transition-colors"
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-navigation"
+            className="md:hidden p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
 
+        <nav className="hidden border-t border-[#344a5a] bg-[#1b3446] px-4 py-2 md:block">
+          <ul className="flex items-center gap-5 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:gap-7">
+            {parentCategories.map((category) => {
+              const hasChildren = categories.some(c => c.parent_id === category.id);
+              return (
+                <li key={category.id} className="relative group">
+                  <Link
+                    href={`/category/${category.slug}`}
+                    className="flex items-center gap-1 py-1 text-sm font-medium text-white/90 transition-colors hover:text-[#f3c56b]"
+                  >
+                    {category.name}
+                    {hasChildren && (
+                      <ChevronRight className="w-3 h-3 transition-transform group-hover:rotate-90" />
+                    )}
+                  </Link>
+
+                  {hasChildren && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-64 rounded-lg border border-gray-100 bg-white opacity-0 shadow-xl invisible transition-all duration-200 group-hover:visible group-hover:opacity-100">
+                      <div className="py-2">
+                        {categories
+                          .filter(c => c.parent_id === category.id)
+                          .map(subcat => (
+                            <Link
+                              key={subcat.id}
+                              href={`/category/${subcat.slug}`}
+                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-[#1E3A5F] transition-colors"
+                            >
+                              {subcat.name}
+                            </Link>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       </div>
 
       {isMenuOpen && (
-        <div ref={mobileMenuRef} className="md:hidden bg-white border-t border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
-            <div className="relative">
+        <div className="fixed inset-0 z-[60] md:hidden">
+          <button
+            type="button"
+            aria-label="Menüyü kapat"
+            className="absolute inset-0 h-full w-full bg-slate-950/55 backdrop-blur-[2px]"
+            onClick={() => setIsMenuOpen(false)}
+          />
+          <aside
+            ref={mobileMenuRef}
+            id="mobile-navigation"
+            aria-label="Ana menü"
+            className="absolute right-0 top-0 flex h-[100dvh] w-[min(88vw,390px)] flex-col bg-white shadow-2xl motion-safe:animate-[drawer-in_240ms_ease-out]"
+          >
+            <div className="flex items-center justify-between bg-[#1b3446] px-5 py-5 text-white">
+              <div>
+                <p className="text-xs font-medium text-white/70">HK BROS mağazasına</p>
+                <h2 className="mt-1 text-lg font-bold">Hoş geldiniz</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMenuOpen(false)}
+                aria-label="Menüyü kapat"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-5 overflow-y-auto px-4 py-5">
+              <div className="relative">
               <form onSubmit={handleMobileSearchSubmit} className="relative">
                 <input
                   ref={mobileSearchInputRef}
                   type="text"
                   placeholder="Ürün ara..."
-                  maxLength={80}
                   value={mobileSearchQuery}
                   onChange={handleMobileSearchChange}
                   onFocus={() => mobileSearchResults.length > 0 && setMobileIsDropdownOpen(true)}
-                  className="w-full px-4 py-3 pr-12 rounded-lg border-2 border-gray-200 focus:border-[#1E3A5F] focus:outline-none"
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 pr-12 text-sm outline-none transition focus:border-[#1e5362] focus:bg-white focus:ring-2 focus:ring-[#1e5362]/10"
                   autoComplete="off"
                 />
-                <button type="submit" aria-label="Arama Yap" className="absolute right-4 top-1/2 -translate-y-1/2">
+                <button type="submit" aria-label="Arama Yap" className="absolute right-3 top-1/2 -translate-y-1/2">
                   {mobileIsSearching ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
                   ) : (
-                    <Search className="w-5 h-5 text-gray-400" />
+                    <Search className="h-5 w-5 text-gray-400" />
                   )}
                 </button>
               </form>
@@ -428,11 +560,11 @@ export default function Header() {
               {mobileIsDropdownOpen && (
                 <div
                   ref={mobileDropdownRef}
-                  className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 max-h-[400px] overflow-y-auto"
+                  className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[400px] overflow-y-auto rounded-xl border border-gray-100 bg-white shadow-2xl"
                 >
                   {mobileIsSearching ? (
                     <div className="flex items-center justify-center py-6">
-                      <Loader2 className="w-5 h-5 animate-spin text-[#1E3A5F]" />
+                      <Loader2 className="h-5 w-5 animate-spin text-[#1E3A5F]" />
                       <span className="ml-2 text-sm text-gray-600">Aranıyor...</span>
                     </div>
                   ) : mobileSearchResults.length === 0 ? (
@@ -459,7 +591,7 @@ export default function Header() {
                       <Link
                         href={`/search?q=${encodeURIComponent(mobileSearchQuery)}`}
                         onClick={() => setMobileIsDropdownOpen(false)}
-                        className="block px-4 py-3 bg-[#1E3A5F] text-white text-center text-sm font-semibold hover:bg-[#1A3354] transition-colors"
+                        className="block bg-[#1E3A5F] px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-[#1A3354]"
                       >
                         Tüm sonuçları gör →
                       </Link>
@@ -469,7 +601,103 @@ export default function Header() {
               )}
             </div>
 
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Link
+                  href="/favorilerim"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex min-h-20 flex-col justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 transition hover:border-[#9bbcb6] hover:bg-[#f6faf9]"
+                >
+                  <Heart className="h-5 w-5 text-[#39766e]" />
+                  Favorilerim
+                </Link>
+                <Link
+                  href="/cart"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex min-h-20 flex-col justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 transition hover:border-[#9bbcb6] hover:bg-[#f6faf9]"
+                >
+                  <ShoppingBag className="h-5 w-5 text-[#39766e]" />
+                  Sepetim
+                </Link>
+                <Link
+                  href="/siparis-takip"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="col-span-2 flex items-center gap-3 rounded-xl bg-[#f2f5f6] px-4 py-3 text-sm font-semibold text-gray-800 transition hover:bg-[#e8eff0]"
+                >
+                  <User className="h-5 w-5 text-[#39766e]" />
+                  Siparişlerim ve sipariş takibi
+                  <ChevronRight className="ml-auto h-4 w-4 text-gray-400" />
+                </Link>
+              </div>
+
+              <Link
+                href="/products"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-3 rounded-xl bg-[#fff5df] px-4 py-3 text-sm font-bold text-[#795517] transition hover:bg-[#ffedc5]"
+              >
+                <ShoppingBag className="h-5 w-5" />
+                Tüm ürünleri görüntüle
+                <ChevronRight className="ml-auto h-4 w-4" />
+              </Link>
+
+              <nav aria-label="Kategoriler">
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">Alışveriş kategorileri</h3>
+                  <span className="text-xs text-gray-400">{parentCategories.length} kategori</span>
+                </div>
+                <ul className="divide-y divide-gray-100 rounded-xl border border-gray-100 bg-white">
+                {parentCategories.map((category) => {
+                  const hasChildren = categories.some(c => c.parent_id === category.id);
+                  const subcategories = categories.filter(c => c.parent_id === category.id);
+                  const isExpanded = expandedMobileCategory === category.id;
+
+                  return (
+                    <li key={category.id} className="px-3 py-1">
+                      <div className="flex items-center">
+                        <Link
+                          href={`/category/${category.slug}`}
+                          className="flex-1 py-3 text-sm font-medium text-gray-800 transition-colors hover:text-[#1e5362]"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          {category.name}
+                        </Link>
+                      {hasChildren && (
+                        <button
+                          type="button"
+                          aria-label={`${category.name} alt kategorilerini ${isExpanded ? 'kapat' : 'aç'}`}
+                          aria-expanded={isExpanded}
+                          onClick={() => setExpandedMobileCategory(isExpanded ? null : category.id)}
+                          className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100"
+                        >
+                          <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+                      )}
+                      </div>
+                      {hasChildren && isExpanded && (
+                        <ul className="mb-2 ml-2 space-y-1 border-l-2 border-[#dce8e5] pl-3">
+                          {subcategories.map((subcategory) => (
+                            <li key={subcategory.id}>
+                              <Link
+                                href={`/category/${subcategory.slug}`}
+                                onClick={() => setIsMenuOpen(false)}
+                                className="block rounded-md px-2 py-2 text-sm text-gray-600 transition hover:bg-[#f4f8f7] hover:text-[#1e5362]"
+                              >
+                                {subcategory.name}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+                </ul>
+              </nav>
+            </div>
+
+            <div className="border-t border-gray-100 px-5 py-3 text-center text-xs text-gray-400">
+              HK BROS GÜMRÜK MALLARI
+            </div>
+          </aside>
         </div>
       )}
     </header>

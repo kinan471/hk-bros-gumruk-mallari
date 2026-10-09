@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import SearchContent from './searchcontent';
+import SearchContent from '@/components/searchcontent';
 import { Loader2 } from 'lucide-react';
 
 export const metadata = {

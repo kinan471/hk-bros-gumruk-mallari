@@ -1,146 +1,157 @@
 'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Tag, Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import type { Product } from '@/types/database';
+import {
+  ArrowLeft,
+  ArrowRight,
+  BadgePercent,
+  ShieldCheck,
+  Sparkles,
+  Truck,
+} from 'lucide-react';
 
-type SliderProduct = Pick<
-  Product,
-  'id' | 'name' | 'slug' | 'main_image' | 'short_description' | 'is_on_sale' | 'sale_price' | 'regular_price'
->;
+const slides = [
+  {
+    eyebrow: 'HK BROS fırsatları',
+    title: 'Aradığınız ürün, doğru fiyatla.',
+    description: 'Elektronikten ev yaşamına, özenle seçilmiş ürünleri keşfedin.',
+    cta: 'Tüm ürünleri keşfet',
+    href: '/products',
+    icon: BadgePercent,
+    accent: 'from-[#15374b] via-[#1d5968] to-[#39766e]',
+    decor: 'bg-[#f3c56b]',
+  },
+  {
+    eyebrow: 'Her gün yeni fırsatlar',
+    title: 'Alışverişinize değer katın.',
+    description: 'Seçili ürünlerdeki güncel fiyatları ve fırsatları inceleyin.',
+    cta: 'İndirimleri gör',
+    href: '/search?q=indirim',
+    icon: Sparkles,
+    accent: 'from-[#3b2547] via-[#694265] to-[#a56668]',
+    decor: 'bg-[#f7c4a4]',
+  },
+  {
+    eyebrow: 'Güvenle alışveriş yapın',
+    title: 'Siparişinizin her adımını takip edin.',
+    description: 'Sipariş durumu ve teslimat bilgileri elinizin altında.',
+    cta: 'Siparişimi takip et',
+    href: '/siparis-takip',
+    icon: ShieldCheck,
+    accent: 'from-[#193c51] via-[#2d6574] to-[#7ca89a]',
+    decor: 'bg-[#d9e6ad]',
+  },
+  {
+    eyebrow: 'Kapınıza kadar',
+    title: 'Yeni favoriniz bir tık uzağınızda.',
+    description: 'Koleksiyonumuza göz atın, size uygun ürünü kolayca bulun.',
+    cta: 'Alışverişe başla',
+    href: '/products',
+    icon: Truck,
+    accent: 'from-[#44351f] via-[#80613a] to-[#c49654]',
+    decor: 'bg-[#f7dd9b]',
+  },
+];
 
-export default function HeroSlider({ sliderProducts }: { sliderProducts: SliderProduct[] }) {
+export default function HeroSlider() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const goToNext = useCallback(() => {
+    setCurrentSlide((previous) => (previous + 1) % slides.length);
+  }, []);
+
+  const goToPrevious = useCallback(() => {
+    setCurrentSlide((previous) => (previous - 1 + slides.length) % slides.length);
+  }, []);
 
   useEffect(() => {
-    if (sliderProducts.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (isPaused) return;
+    const timer = window.setInterval(goToNext, 6000);
+    return () => window.clearInterval(timer);
+  }, [goToNext, isPaused]);
 
-    const intervalId = window.setInterval(() => {
-      setCurrentSlide((current) => (current + 1) % sliderProducts.length);
-    }, 3000);
-
-    return () => window.clearInterval(intervalId);
-  }, [sliderProducts]);
-
-  if (sliderProducts.length === 0) return null;
-
-  const currentProduct = sliderProducts[currentSlide];
-  const hasDiscount = Boolean(
-    currentProduct.is_on_sale &&
-    currentProduct.sale_price !== null &&
-    currentProduct.regular_price !== null &&
-    currentProduct.sale_price < currentProduct.regular_price
-  );
-  const discountPercentage = hasDiscount 
-    ? Math.round((1 - (currentProduct.sale_price || 0) / (currentProduct.regular_price || 1)) * 100) 
-    : 0;
+  const slide = slides[currentSlide];
+  const Icon = slide.icon;
 
   return (
-    <section aria-label="Öne çıkan ürünler" className="mt-4 w-full px-3 mb-5 sm:mt-6 sm:px-6 sm:mb-8 lg:px-8">
-      <div className="relative mx-auto max-w-7xl overflow-hidden rounded-2xl border border-gray-100 bg-[#f6f4ef] shadow-sm sm:rounded-3xl">
-        <div
-          key={currentProduct.id}
-          className="grid h-[260px] grid-cols-[1fr_1fr] gap-0 overflow-hidden animate-[hero-slide-in_700ms_cubic-bezier(0.22,1,0.36,1)] sm:h-64 md:h-72 lg:h-[400px]"
-        >
-          {/* Image Section - تم ضبط object-contain لإظهار الصورة كاملة */}
-          <div className="relative h-full min-h-0 overflow-hidden bg-gradient-to-br from-gray-50 to-blue-50">
-            <Image
-              src={currentProduct.main_image}
-              alt={currentProduct.name}
-              fill
-              sizes="(max-width: 1024px) 55vw, 50vw"
-              className="object-contain p-2"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10 lg:bg-gradient-to-r lg:from-transparent lg:to-white/20" />
-          </div>
-
-          {/* Content Section */}
-          <div className="flex h-full min-h-0 min-w-0 items-center overflow-hidden p-3 sm:p-5 md:p-7 lg:p-12">
-            <div className="flex w-full min-w-0 flex-col justify-center gap-2 sm:gap-3 lg:gap-4">
-              {/* Badges */}
-              <div className="flex h-4 items-center gap-1 overflow-hidden sm:h-6 sm:gap-2 lg:h-7">
-                {hasDiscount && (
-                  <div className="inline-flex items-center gap-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold text-[8px] sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-sm shadow-lg">
-                    <Zap className="w-2.5 h-2.5 sm:w-4 sm:h-4 fill-current" />
-                    <span>%{discountPercentage} İndirim</span>
-                  </div>
-                )}
-                {currentProduct.is_on_sale && (
-                  <div className="inline-flex items-center gap-1 bg-[#E8B04B] text-[#1E3A5F] px-1.5 py-0.5 rounded-full font-bold text-[8px] sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-sm shadow-lg">
-                    <Tag className="w-2.5 h-2.5 sm:w-4 sm:h-4" />
-                    <span>Fırsat</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Product Name - تم إزالة حظر الارتفاع الثابت وتصغير حجم الخط لتجنب القص */}
-              <div className="flex items-center min-w-0">
-                <h2 className="text-xs font-semibold leading-snug text-gray-900 line-clamp-2 sm:text-lg md:text-xl lg:text-3xl xl:text-4xl">
-                  {currentProduct.name}
-                </h2>
-              </div>
-
-              {/* Short Description */}
-              <div className="flex items-center min-w-0">
-                {currentProduct.short_description && (
-                  <p className="text-[10px] leading-snug text-gray-600 line-clamp-2 sm:text-xs md:text-sm lg:text-base">
-                    {currentProduct.short_description}
-                  </p>
-                )}
-              </div>
-
-              {/* Price */}
-              <div className="flex items-center">
-                {hasDiscount ? (
-                  <div className="flex items-baseline gap-1 sm:gap-3">
-                    <span className="text-base font-semibold text-[#8c332b] sm:text-2xl lg:text-3xl">₺{currentProduct.sale_price}</span>
-                    <span className="text-[10px] text-gray-500 line-through sm:text-sm lg:text-lg">₺{currentProduct.regular_price}</span>
-                  </div>
-                ) : (
-                  <span className="text-base font-semibold text-gray-900 sm:text-2xl lg:text-3xl">
-                    ₺{currentProduct.regular_price ?? '0'}
-                  </span>
-                )}
-              </div>
-
-              {/* CTA Button */}
-              <div>
-                <Link
-                  href={`/products/${currentProduct.slug}`}
-                  className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1.5 text-[10px] font-semibold text-white shadow-sm transition-colors hover:bg-gray-700 sm:gap-2 sm:px-5 sm:py-2 sm:text-xs lg:px-7 lg:py-2.5 lg:text-sm"
-                >
-                  Ürünü İncele
-                </Link>
-              </div>
-            </div>
-          </div>
+    <section
+      aria-label="Öne çıkan fırsatlar"
+      aria-roledescription="carousel"
+      className="relative overflow-hidden bg-[#e3e6e6] px-3 pb-5 sm:px-6"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocus={() => setIsPaused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setIsPaused(false);
+      }}
+    >
+      <div
+        className={`relative mx-auto mt-4 flex min-h-[320px] max-w-[1440px] overflow-hidden rounded-xl bg-gradient-to-br ${slide.accent} text-white transition-colors duration-700 sm:min-h-[370px]`}
+      >
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div className={`absolute -right-20 -top-24 h-72 w-72 rounded-full ${slide.decor} opacity-20 blur-2xl transition-colors duration-700`} />
+          <div className="absolute -bottom-40 right-[18%] h-80 w-80 rounded-full border-[36px] border-white/10" />
+          <div className="absolute bottom-8 right-[12%] hidden h-36 w-36 rotate-12 rounded-[2rem] border border-white/20 bg-white/[0.06] backdrop-blur-sm sm:block" />
+          <div className="absolute right-[23%] top-12 hidden h-14 w-14 -rotate-12 rounded-2xl border border-white/20 bg-white/10 sm:block" />
         </div>
 
-        {/* Slide Counter - تم إزالة أزرار الأسهم والإبقاء على العداد فقط */}
-        {sliderProducts.length > 1 && (
-          <div className="absolute bottom-3 right-3 flex items-center sm:bottom-4 sm:right-4">
-            <span className="rounded-full bg-white/90 px-3 py-1 text-[10px] sm:text-xs font-medium text-gray-700 shadow-sm" aria-live="polite">
-              {currentSlide + 1} / {sliderProducts.length}
-            </span>
-          </div>
-        )}
+        <div
+          key={currentSlide}
+          className="relative z-10 flex w-full max-w-2xl flex-col justify-center px-6 py-10 motion-safe:animate-[fade-in_500ms_ease-out] sm:px-12"
+        >
+          <span className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold backdrop-blur">
+            <Icon className="h-4 w-4 text-[#f3c56b]" />
+            {slide.eyebrow}
+          </span>
+          <h1 className="max-w-xl text-3xl font-bold leading-tight sm:text-5xl">
+            {slide.title}
+          </h1>
+          <p className="mt-4 max-w-lg text-sm leading-6 text-white/85 sm:text-base sm:leading-7">
+            {slide.description}
+          </p>
+          <Link
+            href={slide.href}
+            className="mt-7 inline-flex w-fit items-center gap-2 rounded-md bg-[#f3c56b] px-5 py-3 text-sm font-bold text-[#172b3a] transition hover:bg-[#ffd77d]"
+          >
+            {slide.cta}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
 
-        <div className="absolute bottom-4 left-4 flex gap-2">
-          {sliderProducts.map((_, index) => (
+        <div className="absolute bottom-5 left-6 z-10 flex items-center gap-2 sm:left-12">
+          {slides.map((item, index) => (
             <button
-              key={index}
+              key={item.eyebrow}
               type="button"
               onClick={() => setCurrentSlide(index)}
-              className={`h-2.5 rounded-full transition-all duration-300 ${
-                index === currentSlide ? 'w-8 bg-gray-900' : 'w-2.5 bg-gray-400 hover:bg-gray-600'
+              aria-label={`عرض الشريحة ${index + 1}`}
+              aria-current={index === currentSlide}
+              className={`h-1.5 rounded-full transition-all ${
+                index === currentSlide ? 'w-8 bg-[#f3c56b]' : 'w-3 bg-white/50 hover:bg-white/80'
               }`}
-              aria-label={`Ürün ${index + 1}`}
-              aria-current={index === currentSlide ? 'true' : undefined}
             />
           ))}
+        </div>
+
+        <div className="absolute bottom-4 right-4 z-10 flex gap-2">
+          <button
+            type="button"
+            onClick={goToPrevious}
+            aria-label="الشريحة السابقة"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur transition hover:bg-white/20"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={goToNext}
+            aria-label="الشريحة التالية"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur transition hover:bg-white/20"
+          >
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </section>

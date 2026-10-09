@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Shield } from 'lucide-react';
+import { Zap, Shield } from 'lucide-react';
 
 interface ProductGalleryProps {
   mainImage: string;
@@ -43,37 +43,37 @@ export default function ProductGallery({
   };
 
   return (
-    <div className="space-y-4 lg:sticky lg:top-28 lg:self-start">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-gray-200/80 bg-[#f6f5f1] shadow-sm sm:aspect-square sm:rounded-3xl">
+    <div className="space-y-4">
+      <div className="aspect-square bg-white rounded-2xl overflow-hidden relative group shadow-sm">
         <Image
           src={currentImage}
           alt={`${productName} - Görsel ${activeIndex + 1}`}
           fill
-          className="object-contain p-3 transition-transform duration-500 sm:p-8"
-          preload={activeIndex === 0}
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          priority={activeIndex === 0}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
           quality={85}
         />
         
         {hasDiscount && activeIndex === 0 && (
-          <div className="absolute -left-8 top-4 flex w-32 -rotate-45 items-center justify-center gap-1.5 bg-[#8c332b] py-1 text-[10px] font-semibold text-white shadow-sm sm:left-4 sm:top-4 sm:w-auto sm:rotate-0 sm:rounded-full sm:px-3 sm:py-1.5 sm:text-xs">
+          <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-lg flex items-center gap-1">
+            <Zap className="w-4 h-4 fill-current" />
             %{discountPercentage} İndirim
           </div>
         )}
       </div>
       
       {allImages.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="grid grid-cols-4 gap-2">
           {allImages.map((img, index) => (
             <button
               key={index}
               type="button"
               onClick={() => setActiveIndex(index)}
-              aria-pressed={activeIndex === index}
-              className={`relative aspect-square w-[58px] shrink-0 overflow-hidden rounded-lg border transition-all sm:w-[82px] sm:rounded-xl ${
+              className={`aspect-square bg-white rounded-lg overflow-hidden border-2 transition-all cursor-pointer relative shadow-sm ${
                 activeIndex === index 
-                  ? 'border-[#1E3A5F] ring-2 ring-[#1E3A5F]/15'
-                  : 'border-gray-200 bg-[#f6f5f1] hover:border-gray-400'
+                  ? 'border-[#1E3A5F] ring-2 ring-[#1E3A5F]/20'
+                  : 'border-transparent hover:border-[#1E3A5F]'
               }`}
               aria-label={`${productName} görsel ${index + 1}`}
             >
@@ -81,8 +81,8 @@ export default function ProductGallery({
                 src={img}
                 alt={`${productName} ${index + 1}`}
                 fill
-                className="object-contain p-2"
-                sizes="82px"
+                className="object-cover"
+                sizes="25vw"
                 loading="lazy"
               />
             </button>
@@ -90,16 +90,18 @@ export default function ProductGallery({
         </div>
       )}
 
-      {/* حالة المنتج */}
       {productCondition && (
-        <div className={`rounded-xl border p-3 sm:rounded-2xl sm:p-5 ${getConditionStyle(productCondition)}`}>
-          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-950">
-            <Shield className="h-4 w-4 text-[#1E3A5F]" />
-            Ürün kondisyonu
+        <div className={`p-4 rounded-xl border ${getConditionStyle(productCondition)}`}>
+          <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-[#1E3A5F]" />
+            Ürün Durumu
           </h4>
-          <p className="text-sm font-medium text-gray-700">{getConditionIcon(productCondition)} {productCondition}</p>
-          <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
-            Ürün durumuyla ilgili detayları sipariş öncesinde WhatsApp üzerinden satıcıya sorabilirsiniz.
+          <p className="text-sm text-gray-700">
+            <span className="font-semibold">Bu ürün: </span>
+            {getConditionIcon(productCondition)} {productCondition}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            * Gümrük malları doğası gereği ambalajında küçük değişiklikler olabilir, ancak ürün işlevselliği ve orijinalliği %100 garantilidir.
           </p>
         </div>
       )}

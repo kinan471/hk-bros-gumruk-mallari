@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProductCard from '@/components/products/ProductCard';
@@ -13,32 +12,41 @@ type SearchProduct = ProductCardProduct & {
   is_active: boolean;
   created_at: string;
   category_id: string | null;
-  tags: string[];
   categories: { name: string; slug: string }[] | null;
-  reviewSummary?: ReviewSummary;
+  reviewSummary: ReviewSummary;
 };
 
 export default function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get('q') || '';
+  return <SearchResults key={query} query={query} router={router} />;
+}
 
+function SearchResults({
+  query,
+  router,
+}: {
+  query: string;
+  router: ReturnType<typeof useRouter>;
+}) {
   const [products, setProducts] = useState<SearchProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState(query);
   const [isSaleSearch, setIsSaleSearch] = useState(false);
 
   useEffect(() => {
-    if (!query) {
-      return;
-    }
+    if (query.trim().length < 2) return;
 
+    const controller = new AbortController();
     const fetchResults = async () => {
       setLoading(true);
       setIsSaleSearch(false);
-
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}&mode=results`);
+        const response = await fetch(
+          `/api/search?q=${encodeURIComponent(query.trim())}&mode=results`,
+          { signal: controller.signal }
+        );
         if (!response.ok) throw new Error(`Search request failed with status ${response.status}.`);
         const payload = await response.json() as {
           results: SearchProduct[];
@@ -47,14 +55,15 @@ export default function SearchContent() {
         setIsSaleSearch(payload.isSaleSearch);
         setProducts(payload.results);
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error('Search error:', error);
         setProducts([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
-
-    fetchResults();
+    void fetchResults();
+    return () => controller.abort();
   }, [query]);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -65,7 +74,8 @@ export default function SearchContent() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-[#e3e6e6]">
+      <div className="mx-auto max-w-[1440px] px-3 py-5 sm:px-6 sm:py-7">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Arama Sonuçları</h1>
         {query && (
@@ -109,7 +119,7 @@ export default function SearchContent() {
             <p className="text-gray-600">Aranıyor...</p>
           </div>
         ) : products.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 sm:gap-4">
             {products.map((product) => (
               <ProductCard
                 key={product.id}
@@ -139,6 +149,7 @@ export default function SearchContent() {
           <p className="text-gray-600">Ürün aramak için yukarıdaki arama kutusunu kullanın</p>
         </div>
       )}
+      </div>
     </div>
   );
 }

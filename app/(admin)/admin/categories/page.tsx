@@ -1,21 +1,20 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { compressImage } from '@/lib/utils/compressImage';
 import { generateSlug } from '@/lib/utils/slug';
-import { Category } from '@/types/database';
-import Image from 'next/image';
+import type { Category } from '@/types/database';
 import {
   Plus, Edit, Trash2, Eye, EyeOff,
-  Loader2, Check, X, Folder, FolderOpen, ChevronRight, ChevronDown, ImagePlus
+  Loader2, Check, X, Folder, FolderOpen, ChevronRight, ChevronDown
 } from 'lucide-react';
 
-interface CategoryTreeNode extends Category {
+type CategoryRow = Pick<Category, 'id' | 'name' | 'slug' | 'is_active' | 'parent_id' | 'display_order'>;
+type CategoryTreeNode = CategoryRow & {
   level: number;
   children: CategoryTreeNode[];
-}
+};
 
 export default function AdminCategoriesPage() {
   const queryClient = useQueryClient();
@@ -24,44 +23,23 @@ export default function AdminCategoriesPage() {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryImage, setNewCategoryImage] = useState<File | null>(null);
   const [addingSubTo, setAddingSubTo] = useState<string | null>(null);
   const [newSubCategoryName, setNewSubCategoryName] = useState('');
-  const [newSubCategoryImage, setNewSubCategoryImage] = useState<File | null>(null);
-  const newCategoryImageInputRef = useRef<HTMLInputElement>(null);
-
-  const uploadCategoryImage = async (file: File) => {
-    const compressedFile = await compressImage(file);
-    const extension = compressedFile.type === 'image/webp'
-      ? 'webp'
-      : compressedFile.type === 'image/png'
-        ? 'png'
-        : 'jpg';
-    const filePath = `categories/${crypto.randomUUID()}.${extension}`;
-    const { error } = await supabase.storage
-      .from('product-images')
-      .upload(filePath, compressedFile, { cacheControl: '31536000', upsert: false });
-    if (error) throw error;
-
-    const { data } = supabase.storage.from('product-images').getPublicUrl(filePath);
-    return { filePath, imageUrl: data.publicUrl };
-  };
 
   const { data: categories, isLoading } = useQuery({
     queryKey: ['admin-categories'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name, slug, is_active, parent_id, display_order, image_url')
+        .select('id, name, slug, is_active, parent_id, display_order')
         .order('display_order', { ascending: true });
       if (error) throw error;
-      return data as Category[];
+      return data as CategoryRow[];
     },
   });
 
   const addCategoryMutation = useMutation({
-    mutationFn: async ({ name, image }: { name: string; image: File | null }) => {
-      const uploadedImage = image ? await uploadCategoryImage(image) : null;
+    mutationFn: async (name: string) => {
       const { error } = await supabase
         .from('categories')
         .insert([{
@@ -69,29 +47,17 @@ export default function AdminCategoriesPage() {
           slug: generateSlug(name),
           is_active: true,
           display_order: 0,
-          image_url: uploadedImage?.imageUrl ?? null,
         }]);
-      if (error) {
-        if (uploadedImage) {
-          const { error: cleanupError } = await supabase.storage
-            .from('product-images')
-            .remove([uploadedImage.filePath]);
-          if (cleanupError) console.error('Category image cleanup failed:', cleanupError);
-        }
-        throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
       setNewCategoryName('');
-      setNewCategoryImage(null);
-      if (newCategoryImageInputRef.current) newCategoryImageInputRef.current.value = '';
     },
   });
 
   const addSubCategoryMutation = useMutation({
-    mutationFn: async ({ name, parentId, image }: { name: string; parentId: string; image: File | null }) => {
-      const uploadedImage = image ? await uploadCategoryImage(image) : null;
+    mutationFn: async ({ name, parentId }: { name: string; parentId: string }) => {
       const { error } = await supabase
         .from('categories')
         .insert([{
@@ -100,43 +66,13 @@ export default function AdminCategoriesPage() {
           parent_id: parentId,
           is_active: true,
           display_order: 0,
-          image_url: uploadedImage?.imageUrl ?? null,
         }]);
-      if (error) {
-        if (uploadedImage) {
-          const { error: cleanupError } = await supabase.storage
-            .from('product-images')
-            .remove([uploadedImage.filePath]);
-          if (cleanupError) console.error('Category image cleanup failed:', cleanupError);
-        }
-        throw error;
-      }
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
       setNewSubCategoryName('');
-      setNewSubCategoryImage(null);
       setAddingSubTo(null);
-    },
-  });
-
-  const updateImageMutation = useMutation({
-    mutationFn: async ({ id, image }: { id: string; image: File }) => {
-      const uploadedImage = await uploadCategoryImage(image);
-      const { error } = await supabase
-        .from('categories')
-        .update({ image_url: uploadedImage.imageUrl })
-        .eq('id', id);
-      if (error) {
-        const { error: cleanupError } = await supabase.storage
-          .from('product-images')
-          .remove([uploadedImage.filePath]);
-        if (cleanupError) console.error('Category image cleanup failed:', cleanupError);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
     },
   });
 
@@ -186,17 +122,13 @@ export default function AdminCategoriesPage() {
   const handleAddMainCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (newCategoryName.trim()) {
-      addCategoryMutation.mutate({ name: newCategoryName.trim(), image: newCategoryImage });
+      addCategoryMutation.mutate(newCategoryName.trim());
     }
   };
 
   const handleAddSubCategory = (parentId: string) => {
     if (newSubCategoryName.trim()) {
-      addSubCategoryMutation.mutate({
-        name: newSubCategoryName.trim(),
-        parentId,
-        image: newSubCategoryImage,
-      });
+      addSubCategoryMutation.mutate({ name: newSubCategoryName.trim(), parentId });
     }
   };
 
@@ -206,7 +138,7 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const buildTree = (parentId: string | null = null, level: number = 0): CategoryTreeNode[] => {
+  const buildTree = (parentId: string | null = null, level = 0): CategoryTreeNode[] => {
     if (!categories) return [];
     return categories
       .filter(c => c.parent_id === parentId)
@@ -236,19 +168,7 @@ export default function AdminCategoriesPage() {
               ) : (
                 <div className="w-6" />
               )}
-              {node.image_url ? (
-                <Image
-                  src={node.image_url}
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="w-8 h-8 rounded-md object-cover"
-                />
-              ) : node.level === 0 ? (
-                <FolderOpen className="w-5 h-5 text-[#1E3A5F]" />
-              ) : (
-                <Folder className="w-4 h-4 text-gray-500" />
-              )}
+              {node.level === 0 ? <FolderOpen className="w-5 h-5 text-[#1E3A5F]" /> : <Folder className="w-4 h-4 text-gray-500" />}
               
               {isEditing ? (
                 <input
@@ -274,24 +194,6 @@ export default function AdminCategoriesPage() {
             </div>
             
             <div className="flex items-center gap-2">
-              <label
-                htmlFor={`category-image-${node.id}`}
-                className="p-2 text-[#1E3A5F] hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                title="Kategori görseli yükle"
-              >
-                <ImagePlus className="w-4 h-4" />
-              </label>
-              <input
-                id={`category-image-${node.id}`}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(event) => {
-                  const image = event.target.files?.[0];
-                  if (image) updateImageMutation.mutate({ id: node.id, image });
-                  event.target.value = '';
-                }}
-              />
               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${node.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                 {node.is_active ? 'Aktif' : 'Pasif'}
               </span>
@@ -331,7 +233,6 @@ export default function AdminCategoriesPage() {
             </div>
           </div>
           
-          {/* Inline Add Subcategory */}
           {isAddingSub && (
             <div className="flex items-center gap-2 p-3 bg-green-50 border-b border-gray-100">
               <div style={{ width: `${(node.level + 1) * 24 + 24}px` }} />
@@ -351,24 +252,6 @@ export default function AdminCategoriesPage() {
                 }}
                 className="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:border-[#1E3A5F] outline-none"
               />
-              <label
-                htmlFor={`sub-category-image-${node.id}`}
-                title={newSubCategoryImage?.name ?? 'Kategori görseli seç'}
-                className="inline-flex max-w-40 items-center gap-1 px-2 py-1.5 text-sm text-[#1E3A5F] bg-white border border-gray-200 rounded cursor-pointer hover:bg-blue-50"
-              >
-                <ImagePlus className="w-4 h-4 shrink-0" />
-                <span className="truncate">{newSubCategoryImage?.name ?? 'Görsel'}</span>
-              </label>
-              <input
-                id={`sub-category-image-${node.id}`}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(event) => {
-                  setNewSubCategoryImage(event.target.files?.[0] ?? null);
-                  event.target.value = '';
-                }}
-              />
               <button
                 onClick={() => handleAddSubCategory(node.id)}
                 className="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700"
@@ -379,7 +262,6 @@ export default function AdminCategoriesPage() {
                 onClick={() => {
                   setAddingSubTo(null);
                   setNewSubCategoryName('');
-                  setNewSubCategoryImage(null);
                 }}
                 className="px-3 py-1.5 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
               >
@@ -400,64 +282,35 @@ export default function AdminCategoriesPage() {
 
   return (
     <div className="p-6 sm:p-8 space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Kategoriler</h1>
         <p className="text-sm text-gray-500 mt-1">Mağaza kategorilerini yönetin</p>
       </div>
 
-      {/* Quick Add Main Category */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <form onSubmit={handleAddMainCategory} className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="Yeni ana kategori adı..."
-              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/10 outline-none"
-            />
-            <label
-              htmlFor="new-category-image"
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-[#1E3A5F]/20 text-[#1E3A5F] rounded-lg font-medium cursor-pointer hover:bg-[#1E3A5F]/5 transition-colors"
-            >
-              <ImagePlus className="w-4 h-4" />
-              {newCategoryImage ? newCategoryImage.name : 'Arka plan görseli'}
-            </label>
-            <input
-              id="new-category-image"
-              ref={newCategoryImageInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(event) => setNewCategoryImage(event.target.files?.[0] ?? null)}
-            />
-            <button
-              type="submit"
-              disabled={!newCategoryName.trim() || addCategoryMutation.isPending}
-              className="flex items-center justify-center gap-2 bg-[#1E3A5F] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#1A3354] disabled:opacity-50"
-            >
-              {addCategoryMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Plus className="w-4 h-4" />
-              )}
-              Kategori Ekle
-            </button>
-          </div>
-          {(addCategoryMutation.error || addSubCategoryMutation.error || updateImageMutation.error) && (
-            <p role="alert" className="text-sm text-red-600">
-              Kategori işlemi tamamlanamadı: {
-                (addCategoryMutation.error || addSubCategoryMutation.error || updateImageMutation.error) instanceof Error
-                  ? (addCategoryMutation.error || addSubCategoryMutation.error || updateImageMutation.error)?.message
-                  : 'Lütfen tekrar deneyin.'
-              }
-            </p>
-          )}
+        <form onSubmit={handleAddMainCategory} className="flex gap-3">
+          <input
+            type="text"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            placeholder="Yeni ana kategori adı..."
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/10 outline-none"
+          />
+          <button
+            type="submit"
+            disabled={!newCategoryName.trim() || addCategoryMutation.isPending}
+            className="flex items-center gap-2 bg-[#1E3A5F] text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-[#1A3354] disabled:opacity-50"
+          >
+            {addCategoryMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+            Kategori Ekle
+          </button>
         </form>
       </div>
 
-      {/* Categories List */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">

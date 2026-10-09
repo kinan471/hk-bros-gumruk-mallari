@@ -36,9 +36,9 @@ export type Product = {
   width: number | null;
   height: number | null;
   product_type: 'physical' | 'digital' | 'service';
+  product_condition: string | null;
   meta_title: string | null;
   meta_description: string | null;
-  product_condition?: string | null;
   is_featured: boolean;
   is_slider: boolean;
   is_on_sale: boolean;
@@ -56,13 +56,28 @@ export type ProductCardProduct = Pick<
   | 'name'
   | 'slug'
   | 'main_image'
-  | 'brand'
   | 'regular_price'
   | 'sale_price'
-  | 'track_inventory'
-  | 'stock_quantity'
-  | 'stock_status'
-  | 'product_type'
-  | 'is_featured'
-  | 'product_condition'
->;
+> &
+  Partial<
+    Pick<
+      Product,
+      | 'brand'
+      | 'track_inventory'
+      | 'stock_quantity'
+      | 'stock_status'
+      | 'product_type'
+      | 'is_featured'
+    >
+  > & {
+  product_condition?: string | null;
+};
+
+export type ProductImage = {
+  id: string;
+  product_id: string;
+  image_url: string;
+  alt_text: string | null;
+  display_order: number;
+  created_at: string;
+};

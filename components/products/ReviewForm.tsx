@@ -83,7 +83,6 @@ export default function ReviewForm({ productId, onSuccess }: ReviewFormProps) {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Star Rating */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Puanınız *
@@ -120,7 +119,6 @@ export default function ReviewForm({ productId, onSuccess }: ReviewFormProps) {
             </div>
           </div>
 
-          {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Adınız *
@@ -135,7 +133,6 @@ export default function ReviewForm({ productId, onSuccess }: ReviewFormProps) {
             />
           </div>
 
-          {/* Comment */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Yorumunuz (İsteğe Bağlı)
@@ -153,14 +150,12 @@ export default function ReviewForm({ productId, onSuccess }: ReviewFormProps) {
             </p>
           </div>
 
-          {/* Error */}
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
               {error}
             </div>
           )}
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={isSubmitting || rating === 0}

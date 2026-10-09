@@ -22,7 +22,12 @@ export default function ProductReviewsSection({ productId, initialReviews }: Pro
         <ReviewForm productId={productId} onSuccess={handleReviewSuccess} />
       </div>
       <div className="lg:col-span-2">
-        <ReviewsList productId={productId} initialReviews={initialReviews} refreshKey={refreshKey} />
+        <ReviewsList
+          key={productId}
+          productId={productId}
+          initialReviews={initialReviews}
+          refreshKey={refreshKey}
+        />
       </div>
     </div>
   );

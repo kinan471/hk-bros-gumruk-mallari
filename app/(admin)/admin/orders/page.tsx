@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import {
   Search, Eye, Loader2, Package, Clock, CheckCircle,
-  XCircle, DollarSign, Calendar,
+  XCircle, DollarSign, Calendar, RefreshCw,
   MapPin, ShoppingBag, Filter
 } from 'lucide-react';
 
@@ -16,13 +16,13 @@ interface OrderItem {
   name: string;
   quantity: number;
   price: number;
+  condition?: string | null;
 }
 
 interface Order {
   id: string;
   order_number: string;
   customer_name: string;
-  customer_email: string;
   customer_phone: string;
   customer_address: string;
   items: OrderItem[];
@@ -43,17 +43,26 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  const { data: orders, isLoading } = useQuery({
+  const {
+    data: orders,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, customer_name, customer_email, customer_phone, customer_address, items, total_amount, status, payment_status, notes, source, created_at')
+        .select('id, order_number, customer_name, customer_phone, customer_address, items, total_amount, status, payment_status, notes, source, created_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as Order[];
     },
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: 'always',
   });
 
   const updateStatusMutation = useMutation({
@@ -103,13 +112,11 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="p-6 sm:p-8 space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Siparişler</h1>
         <p className="text-sm text-gray-500 mt-1">Tüm siparişleri görüntüleyin ve yönetin</p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-3">
@@ -168,7 +175,6 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -200,8 +206,23 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      {/* Orders Table */}
-      {isLoading ? (
+      {isError ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-red-800">
+          <h2 className="font-semibold">Siparişler yüklenemedi</h2>
+          <p className="mt-1 text-sm">
+            {error instanceof Error ? error.message : 'Sipariş kayıtları alınırken bilinmeyen bir hata oluştu.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-60"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            Yeniden dene
+          </button>
+        </div>
+      ) : isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-12 h-12 animate-spin text-[#1E3A5F]" />
         </div>
@@ -282,7 +303,6 @@ export default function AdminOrdersPage() {
         </div>
       )}
 
-      {/* Order Details Modal */}
       {showDetailsModal && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">

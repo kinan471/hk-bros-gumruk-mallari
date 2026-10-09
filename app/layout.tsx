@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: "En kaliteli gümrük ürünlerini uygun fiyatlarla keşfedin. Elektronik, giyim, ev yaşam ve daha fazlası.",
   keywords: ["gümrük malları", "elektronik", "giyim", "kozmetik", "online alışveriş", "HK BROS"],
   authors: [{ name: "HK BROS" }],
+  icons: { icon: "/logo.png" },
   openGraph: {
     type: "website",
     locale: "tr_TR",

@@ -1,16 +1,64 @@
-import { createClient } from '@/lib/supabase/server';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/server';
+import { fetchReviewSummaries } from '@/lib/utils/reviewSummaries';
 import ProductCard from '@/components/products/ProductCard';
 import HeroSlider from '@/components/layout/HeroSlider';
-import { fetchReviewSummaries } from '@/lib/utils/reviewSummaries';
 import Link from 'next/link';
-import { ArrowUpRight, Package, Star, TrendingUp } from 'lucide-react';
-import type { Product } from '@/types/database';
+import { ArrowRight, ChevronRight, Sparkles, Star } from 'lucide-react';
+import type { ProductCardProduct } from '@/types/database';
+import type { ReviewSummary } from '@/lib/utils/reviewSummaries';
 
-type SliderProduct = Pick<
-  Product,
-  'id' | 'name' | 'slug' | 'main_image' | 'short_description' | 'is_on_sale' | 'sale_price' | 'regular_price'
->;
+type HomeProduct = ProductCardProduct & {
+  category_id: string | null;
+  created_at: string;
+};
+
+interface ProductRailProps {
+  title: string;
+  subtitle: string;
+  products: HomeProduct[];
+  reviewSummaries: Record<string, ReviewSummary>;
+  icon: 'featured' | 'latest';
+}
+
+function ProductRail({ title, subtitle, products, reviewSummaries, icon }: ProductRailProps) {
+  if (products.length === 0) return null;
+
+  const Icon = icon === 'featured' ? Star : Sparkles;
+
+  return (
+    <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+      <div className="mb-5 flex items-end justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#edf4f3] text-[#246b65]">
+            <Icon className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 sm:text-xl">{title}</h2>
+            <p className="mt-0.5 text-sm text-gray-500">{subtitle}</p>
+          </div>
+        </div>
+        <Link
+          href="/products"
+          className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[#1e5362] hover:underline"
+        >
+          Tümünü gör
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </div>
+      <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-3 [scrollbar-width:thin] sm:gap-4">
+        {products.map((product) => (
+          <div key={product.id} className="w-[210px] shrink-0 sm:w-[230px]">
+            <ProductCard
+              product={product}
+              reviewSummary={reviewSummaries[product.id] ?? { averageRating: 0, reviewCount: 0 }}
+            />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export const dynamic = 'force-static';
 export const revalidate = 120;
@@ -23,18 +71,17 @@ export const metadata = {
 export default async function HomePage() {
   const supabase = await createClient();
 
-  const productFields = 'id, name, slug, main_image, regular_price, sale_price, is_featured, track_inventory, stock_quantity, stock_status, product_condition, brand, product_type, created_at';
-  const [featuredResult, latestResult, categoriesResult, sliderResult] = await Promise.all([
+  const [featuredRes, latestRes, categoriesRes] = await Promise.all([
     supabase
       .from('products')
-      .select(productFields)
+      .select('id, name, slug, brand, main_image, regular_price, sale_price, is_featured, track_inventory, stock_quantity, stock_status, product_type, product_condition, category_id, created_at')
       .eq('is_featured', true)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(8),
     supabase
       .from('products')
-      .select(productFields)
+      .select('id, name, slug, brand, main_image, regular_price, sale_price, is_featured, track_inventory, stock_quantity, stock_status, product_type, product_condition, category_id, created_at')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(8),
@@ -43,120 +90,120 @@ export default async function HomePage() {
       .select('id, name, slug, image_url')
       .eq('is_active', true)
       .is('parent_id', null)
-      .order('display_order'),
-    supabase
-      .from('products')
-      .select('id, name, slug, main_image, short_description, is_on_sale, sale_price, regular_price')
-      .eq('is_slider', true)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(5),
+      .order('display_order')
+      .limit(8),
   ]);
 
-  const featuredProducts = featuredResult.data ?? [];
-  const latestProducts = latestResult.data ?? [];
-  const categories = categoriesResult.data ?? [];
-  const sliderProducts = (sliderResult.data ?? []) as SliderProduct[];
-  const reviewSummaries = await fetchReviewSummaries(supabase, [
-    ...featuredProducts.map((product) => product.id),
-    ...latestProducts.map((product) => product.id),
-  ]);
+  if (featuredRes.error) throw featuredRes.error;
+  if (latestRes.error) throw latestRes.error;
+  if (categoriesRes.error) throw categoriesRes.error;
+
+  const featuredProducts = (featuredRes.data ?? []) as HomeProduct[];
+  const latestProducts = (latestRes.data ?? []) as HomeProduct[];
+  const categories = categoriesRes.data ?? [];
+  const reviewSummaries = await fetchReviewSummaries(
+    supabase,
+    [...featuredProducts, ...latestProducts].map((product) => product.id)
+  );
 
   return (
-    <div className="min-h-screen">
-      <HeroSlider sliderProducts={sliderProducts} />
-      
-      {categories.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-12">
-          <div className="mb-5 flex items-end justify-between gap-4 sm:mb-7">
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#8c6b32]">Koleksiyonları keşfet</p>
-              <h2 className="text-xl font-semibold tracking-tight text-gray-950 sm:text-2xl">Alışverişe kategorilerden başlayın</h2>
-            </div>
-            <Link href="/products" className="hidden items-center gap-1 text-sm font-medium text-gray-600 transition-colors hover:text-gray-950 sm:inline-flex">
-              Tüm ürünler <ArrowUpRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:gap-4 sm:px-0">
-            {categories.map((category, index) => (
-              <Link
-                key={category.id}
-                href={`/category/${category.slug}`}
-                className="group relative isolate flex min-h-[135px] w-[72vw] max-w-[220px] shrink-0 snap-start overflow-hidden rounded-xl border border-gray-200 bg-[#f3f1eb] shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] sm:min-h-[200px] sm:w-[260px] sm:max-w-none sm:rounded-2xl lg:min-h-[230px] lg:w-[280px]"
-              >
-                {category.image_url ? (
-                  <Image
-                    src={category.image_url}
-                    alt=""
-                    fill
-                    sizes="(max-width: 640px) 48vw, (max-width: 1024px) 32vw, 25vw"
-                    className="absolute inset-0 -z-10 object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="absolute inset-0 -z-10 flex items-center justify-center bg-gradient-to-br from-[#eee9dc] via-[#f7f5f0] to-[#dce4e4]">
-                    <Package className="h-9 w-9 text-[#1E3A5F]/20 transition-transform duration-500 group-hover:scale-110 sm:h-16 sm:w-16" strokeWidth={1} />
-                  </div>
-                )}
-                <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                <div className="mt-auto flex w-full items-end justify-between gap-2 p-2.5 text-white sm:p-5">
-                  <div className="min-w-0">
-                    <span className="mb-0.5 block text-[8px] font-medium uppercase tracking-[0.12em] text-white/75 sm:mb-1 sm:text-[10px] sm:tracking-[0.15em]">0{index + 1} / Koleksiyon</span>
-                    <h3 className="line-clamp-2 text-xs font-semibold leading-snug sm:text-lg">{category.name}</h3>
-                    <span className="mt-0.5 block text-[9px] text-white/75 sm:mt-1 sm:text-xs">Koleksiyonu keşfet</span>
-                  </div>
-                  <span className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/40 bg-white/10 backdrop-blur-sm transition-all group-hover:bg-white group-hover:text-gray-950 sm:h-8 sm:w-8">
-                    <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+    <div className="min-h-screen bg-[#e3e6e6] pb-8">
+      <HeroSlider />
 
-      {featuredProducts.length > 0 && (
-        <section className="bg-gradient-to-b from-gray-50 to-white py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-[#E8B04B] to-[#F5C06B] rounded-xl flex items-center justify-center">
-                <Star className="w-6 h-6 text-white fill-current" />
-              </div>
+      <div className="mx-auto max-w-[1440px] space-y-5 px-3 sm:px-6">
+        {categories.length > 0 && (
+          <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+            <div className="mb-5 flex items-end justify-between gap-3">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Öne Çıkan Ürünler</h2>
-                <p className="text-gray-500 mt-1">En çok tercih edilen ürünler</p>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#39766e]">Alışverişe başla</p>
+                <h2 className="text-lg font-bold text-gray-900 sm:text-xl">Kategorilere göz at</h2>
               </div>
+              <Link href="/products" className="inline-flex items-center gap-1 text-sm font-semibold text-[#1e5362] hover:underline">
+                Tüm kategoriler
+                <ChevronRight className="h-4 w-4" />
+              </Link>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-              {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} reviewSummary={reviewSummaries[product.id]} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+            <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-3 [scrollbar-width:thin]">
+              {categories.map((category) => {
+                const categoryProduct = latestProducts.find((product) => product.category_id === category.id);
+                const imageUrl = category.image_url || categoryProduct?.main_image;
 
-      {latestProducts.length > 0 && (
-        <section className="bg-gradient-to-b from-white to-gray-50 py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#1E3A5F] to-[#4A90A4] rounded-xl flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Yeni Ürünler</h2>
-                  <p className="text-gray-500 mt-1">En son eklenen ürünler</p>
-                </div>
-              </div>
+                return (
+                  <Link
+                    key={category.id}
+                    href={`/category/${category.slug}`}
+                    className="group w-[155px] shrink-0 snap-start overflow-hidden rounded-lg border border-gray-100 bg-white transition hover:-translate-y-0.5 hover:border-[#9bbcb6] hover:shadow-md sm:w-[185px]"
+                  >
+                    <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-[#edf3f2] to-[#f7f2e9]">
+                      {imageUrl ? (
+                        <Image
+                          src={imageUrl}
+                          alt={category.name}
+                          fill
+                          sizes="(max-width: 640px) 45vw, (max-width: 1024px) 22vw, 150px"
+                          className="object-cover transition duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center px-3 text-center text-2xl font-bold text-[#39766e]/60">
+                          {category.name.slice(0, 1)}
+                        </div>
+                      )}
+                    </div>
+                    <p className="line-clamp-2 min-h-12 px-3 py-2.5 text-sm font-semibold text-gray-800 group-hover:text-[#1e5362]">
+                      {category.name}
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-              {latestProducts.map((product) => (
-                <ProductCard key={product.id} product={product} reviewSummary={reviewSummaries[product.id]} />
-              ))}
+          </section>
+        )}
+
+        <ProductRail
+          title="Öne çıkan ürünler"
+          subtitle="Mağazamızdan sizin için seçtiklerimiz"
+          products={featuredProducts}
+          reviewSummaries={reviewSummaries}
+          icon="featured"
+        />
+
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Link
+            href="/search?q=indirim"
+            className="group flex min-h-36 items-center justify-between overflow-hidden rounded-xl bg-gradient-to-r from-[#fff0d6] to-[#ffe1b2] p-5 sm:p-7"
+          >
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#95611b]">Fırsatları kaçırma</p>
+              <h2 className="mt-2 text-xl font-bold text-gray-900 sm:text-2xl">İndirimli ürünleri keşfet</h2>
+              <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#80520f]">
+                Alışverişe başla <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+              </span>
             </div>
-          </div>
+            <span className="pr-2 text-5xl font-black text-[#bc8129]/30 sm:text-6xl">%</span>
+          </Link>
+          <Link
+            href="/siparis-takip"
+            className="group flex min-h-36 items-center justify-between overflow-hidden rounded-xl bg-gradient-to-r from-[#dcece8] to-[#c5ded8] p-5 sm:p-7"
+          >
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#39766e]">Siparişini takip et</p>
+              <h2 className="mt-2 text-xl font-bold text-gray-900 sm:text-2xl">Her şey yolunda mı?</h2>
+              <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[#285a54]">
+                Sipariş durumunu gör <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+              </span>
+            </div>
+            <span className="pr-2 text-5xl font-black text-[#39766e]/20 sm:text-6xl">HK</span>
+          </Link>
         </section>
-      )}
+
+        <ProductRail
+          title="Yeni gelenler"
+          subtitle="En son eklenen ürünler"
+          products={latestProducts}
+          reviewSummaries={reviewSummaries}
+          icon="latest"
+        />
+      </div>
     </div>
   );
 }

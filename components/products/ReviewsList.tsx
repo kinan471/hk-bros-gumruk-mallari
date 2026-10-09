@@ -20,70 +20,53 @@ interface ReviewsListProps {
 }
 
 export default function ReviewsList({ productId, initialReviews, refreshKey }: ReviewsListProps) {
-  const supabase = useMemo(() => createClient(), []);
-  const [reviews, setReviews] = useState<Review[]>(initialReviews);
-  const [loading, setLoading] = useState(false);
-  const [averageRating, setAverageRating] = useState(() =>
-    initialReviews.length > 0
-      ? Math.round((initialReviews.reduce((sum, review) => sum + review.rating, 0) / initialReviews.length) * 10) / 10
-      : 0
-  );
-  const [totalReviews, setTotalReviews] = useState(initialReviews.length);
-  const [ratingDistribution, setRatingDistribution] = useState(() => {
-    const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    initialReviews.forEach((review) => {
-      if (review.rating >= 1 && review.rating <= 5) {
-        distribution[review.rating as keyof typeof distribution]++;
-      }
-    });
-    return distribution;
-  });
+  const supabase = createClient();
+  const [reviews, setReviews] = useState(initialReviews);
 
   useEffect(() => {
     if (refreshKey === 0) return;
-    let isCurrent = true;
 
-    const loadReviews = async () => {
-      setLoading(true);
+    let isCurrent = true;
+    const fetchReviews = async () => {
       try {
         const { data, error } = await supabase
-          .from('reviews')
-          .select('id, product_id, user_name, rating, comment, created_at')
-          .eq('product_id', productId)
-          .eq('is_approved', true)
-          .order('created_at', { ascending: false });
+        .from('reviews')
+        .select('id, product_id, user_name, rating, comment, created_at')
+        .eq('product_id', productId)
+        .eq('is_approved', true)
+        .order('created_at', { ascending: false });
 
         if (error) throw error;
-        if (!isCurrent) return;
-
-        const reviewsList = data || [];
-        setReviews(reviewsList);
-        setTotalReviews(reviewsList.length);
-        setAverageRating(
-          reviewsList.length > 0
-            ? Math.round((reviewsList.reduce((sum, review) => sum + review.rating, 0) / reviewsList.length) * 10) / 10
-            : 0
-        );
-
-        const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-        reviewsList.forEach((review) => {
-          if (review.rating >= 1 && review.rating <= 5) {
-            distribution[review.rating as keyof typeof distribution]++;
-          }
-        });
-        setRatingDistribution(distribution);
+        if (isCurrent) setReviews(data ?? []);
       } catch (error) {
-        if (isCurrent) console.error('Error fetching reviews:', error);
-      } finally {
-        if (isCurrent) setLoading(false);
+        console.error('Error fetching reviews:', error);
       }
     };
 
-    void loadReviews();
+    void fetchReviews();
     return () => {
       isCurrent = false;
     };
   }, [productId, refreshKey, supabase]);
+
+  const { averageRating, totalReviews, ratingDistribution } = useMemo(() => {
+    const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    const ratingTotal = reviews.reduce((sum, review) => {
+      if (review.rating >= 1 && review.rating <= 5) {
+        distribution[review.rating as keyof typeof distribution] += 1;
+        return sum + review.rating;
+      }
+      return sum;
+    }, 0);
+
+    return {
+      averageRating: reviews.length
+        ? Math.round((ratingTotal / reviews.length) * 10) / 10
+        : 0,
+      totalReviews: reviews.length,
+      ratingDistribution: distribution,
+    };
+  }, [reviews]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -98,22 +81,6 @@ export default function ReviewsList({ productId, initialReviews, refreshKey }: R
     const labels = { 1: 'Çok Kötü', 2: 'Kötü', 3: 'Orta', 4: 'İyi', 5: 'Mükemmel' };
     return labels[rating as keyof typeof labels] || '';
   };
-
-  if (loading) {
-    return (
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          <div className="space-y-2">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
@@ -130,9 +97,7 @@ export default function ReviewsList({ productId, initialReviews, refreshKey }: R
         </div>
       ) : (
         <>
-          {/* Rating Summary */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 pb-6 border-b border-gray-100">
-            {/* Average Rating */}
             <div className="text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
                 <span className="text-5xl font-bold text-gray-900">{averageRating}</span>
@@ -154,7 +119,6 @@ export default function ReviewsList({ productId, initialReviews, refreshKey }: R
               </div>
             </div>
 
-            {/* Rating Distribution */}
             <div className="space-y-2">
               {[5, 4, 3, 2, 1].map(rating => {
                 const count = ratingDistribution[rating as keyof typeof ratingDistribution];
@@ -176,7 +140,6 @@ export default function ReviewsList({ productId, initialReviews, refreshKey }: R
             </div>
           </div>
 
-          {/* Reviews List */}
           <div className="space-y-4">
             {reviews.map(review => (
               <div

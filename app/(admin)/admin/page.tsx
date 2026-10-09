@@ -6,32 +6,6 @@ import {
   Plus, MoreVertical
 } from 'lucide-react';
 
-type RecentProduct = {
-  id: string;
-  name: string;
-  slug: string;
-  regular_price: number | null;
-  sale_price: number | null;
-  stock_quantity: number;
-  track_inventory: boolean;
-  created_at: string;
-  categories: { name: string }[] | null;
-};
-
-type TopProduct = Pick<RecentProduct, 'id' | 'name' | 'slug' | 'regular_price' | 'sale_price'> & {
-  views_count: number;
-  main_image: string;
-};
-
-type RecentOrder = {
-  id: string;
-  order_number: string;
-  customer_name: string;
-  total_amount: number;
-  status: string;
-  created_at: string;
-};
-
 export const metadata = {
   title: 'Kontrol Paneli - HK BROS Admin',
 };
@@ -44,9 +18,9 @@ export default async function AdminDashboard() {
     { count: totalCategories },
     { count: lowStockProducts },
     { count: totalOrders },
-    { data: recentProductsData },
-    { data: topProductsData },
-    { data: recentOrdersData }
+    { data: recentProducts },
+    { data: topProducts },
+    { data: recentOrders }
   ] = await Promise.all([
     supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
     supabase.from('categories').select('*', { count: 'exact', head: true }).eq('is_active', true),
@@ -56,9 +30,6 @@ export default async function AdminDashboard() {
     supabase.from('products').select('id, name, slug, regular_price, sale_price, views_count, main_image').eq('is_active', true).order('views_count', { ascending: false }).limit(5),
     supabase.from('orders').select('id, order_number, customer_name, total_amount, status, created_at').order('created_at', { ascending: false }).limit(5)
   ]);
-  const recentProducts = (recentProductsData ?? []) as RecentProduct[];
-  const topProducts = (topProductsData ?? []) as TopProduct[];
-  const recentOrders = (recentOrdersData ?? []) as RecentOrder[];
 
   const stats = [
     {
@@ -97,7 +68,6 @@ export default async function AdminDashboard() {
 
   return (
     <div className="p-6 sm:p-8 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Kontrol Paneli</h1>
@@ -109,7 +79,6 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
@@ -138,9 +107,7 @@ export default async function AdminDashboard() {
         })}
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Products */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100">
             <div className="flex items-center justify-between">
@@ -189,7 +156,6 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
-        {/* Stock Alerts */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100">
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -233,9 +199,7 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* Top Products & Recent Orders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Viewed Products */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100">
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -273,7 +237,6 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Orders */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100">
             <div className="flex items-center justify-between">
@@ -326,7 +289,6 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div className="bg-gradient-to-br from-[#1E3A5F] to-[#4A90A4] rounded-2xl p-6 sm:p-8 text-white">
         <h2 className="text-xl font-bold mb-4">Hızlı İşlemler</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -18,7 +18,7 @@ const getSearchData = unstable_cache(
     const isSaleSearch = mode === 'results' && ['indirim', 'sale', 'discount'].includes(term);
     let productQuery = supabase
       .from('products')
-      .select('id, name, slug, brand, regular_price, sale_price, short_description, main_image, is_active, created_at, category_id, tags, is_featured, track_inventory, stock_quantity, stock_status, product_condition, product_type, categories(name, slug)')
+      .select('id, name, slug, brand, regular_price, sale_price, short_description, main_image, is_active, created_at, category_id, is_featured, track_inventory, stock_quantity, stock_status, product_condition, product_type, categories(name, slug)')
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
@@ -38,14 +38,6 @@ const getSearchData = unstable_cache(
     if (error) throw error;
 
     const results = data ?? [];
-    const lowerQuery = term.toLowerCase();
-    const tagMatches = results.filter(
-      (product) => product.tags?.some((tag: string) => tag.toLowerCase().includes(lowerQuery))
-    );
-    const existingIds = new Set(results.map((product) => product.id));
-    tagMatches.forEach((product) => {
-      if (!existingIds.has(product.id)) results.push(product);
-    });
 
     if (mode === 'suggestions') return { results: results.slice(0, 6), isSaleSearch: false };
 
@@ -53,7 +45,7 @@ const getSearchData = unstable_cache(
     return {
       results: results.map((product) => ({
         ...product,
-        reviewSummary: reviewSummaries[product.id],
+        reviewSummary: reviewSummaries[product.id] ?? { averageRating: 0, reviewCount: 0 },
       })),
       isSaleSearch,
     };
