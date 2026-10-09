@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { ShoppingCart, Check, Minus, Plus } from 'lucide-react';
 import { useCart } from '@/lib/cart/CartContext';
+import { getCurrentProductPrice } from '@/lib/utils/pricing';
 
 interface AddToCartButtonProps {
   product: {
@@ -22,13 +23,14 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const { addItem, items, updateQuantity } = useCart();
   const [isAdded, setIsAdded] = useState(false);
 
-  const currentPrice = product.sale_price || product.regular_price || 0;
+  const currentPrice = getCurrentProductPrice(product.regular_price, product.sale_price);
   const cartItem = items.find(item => item.id === product.id);
   const isInCart = !!cartItem;
   const isOutOfStock =
-    product.track_inventory === true &&
-    (product.stock_status === 'out_of_stock' ||
-      (product.stock_status !== 'pre_order' && (product.stock_quantity ?? 0) <= 0));
+    currentPrice === null ||
+    (product.track_inventory === true &&
+      (product.stock_status === 'out_of_stock' ||
+        (product.stock_status !== 'pre_order' && (product.stock_quantity ?? 0) <= 0)));
 
   const handleAdd = () => {
     if (isOutOfStock) return;
@@ -38,7 +40,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       name: product.name,
       slug: product.slug,
       price: currentPrice,
-      regularPrice: product.regular_price || undefined,
+      regularPrice: product.regular_price ?? undefined,
       image: product.main_image,
       condition: product.product_condition || undefined,
     });
@@ -54,7 +56,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
         className="w-full flex items-center justify-center gap-2 bg-gray-200 text-gray-500 px-6 py-4 rounded-xl font-semibold cursor-not-allowed"
       >
         <ShoppingCart className="w-5 h-5" />
-        <span>Stokta Yok</span>
+        <span>{currentPrice === null ? 'Fiyat Bilgisi Yok' : 'Stokta Yok'}</span>
       </button>
     );
   }

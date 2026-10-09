@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Filter, SlidersHorizontal, Search, Loader2, X, ArrowUpDown, TrendingUp, Package, Tag, PackageCheck, Sparkles } from 'lucide-react';
 import type { Category, ProductCardProduct } from '@/types/database';
+import { getCurrentProductPrice, isDiscountedPrice } from '@/lib/utils/pricing';
 
 type SortOption = 'newest' | 'price_low' | 'price_high' | 'rating';
 type CatalogProduct = ProductCardProduct & {
@@ -102,8 +103,14 @@ function AllProductsContent() {
     let result = [...products];
     if (selectedCategory !== 'all') result = result.filter(p => p.category_id === selectedCategory);
     if (brandFilter) result = result.filter(p => p.brand === brandFilter);
-    if (priceRange.min) result = result.filter(p => (p.sale_price || p.regular_price || 0) >= Number(priceRange.min));
-    if (priceRange.max) result = result.filter(p => (p.sale_price || p.regular_price || 0) <= Number(priceRange.max));
+    if (priceRange.min) result = result.filter(p => {
+      const price = getCurrentProductPrice(p.regular_price, p.sale_price);
+      return price !== null && price >= Number(priceRange.min);
+    });
+    if (priceRange.max) result = result.filter(p => {
+      const price = getCurrentProductPrice(p.regular_price, p.sale_price);
+      return price !== null && price <= Number(priceRange.max);
+    });
     if (inStockOnly) {
       result = result.filter(p =>
         p.track_inventory !== true ||
@@ -113,13 +120,7 @@ function AllProductsContent() {
       );
     }
     if (saleOnly) {
-      result = result.filter(p =>
-        p.sale_price !== null &&
-        p.sale_price !== undefined &&
-        p.regular_price !== null &&
-        p.regular_price !== undefined &&
-        p.sale_price < p.regular_price
-      );
+      result = result.filter(p => isDiscountedPrice(p.regular_price, p.sale_price));
     }
     if (featuredOnly) result = result.filter(p => p.is_featured === true);
 
@@ -133,8 +134,14 @@ function AllProductsContent() {
     }
 
     switch (sortBy) {
-      case 'price_low': result.sort((a, b) => (a.sale_price || a.regular_price || 0) - (b.sale_price || b.regular_price || 0)); break;
-      case 'price_high': result.sort((a, b) => (b.sale_price || b.regular_price || 0) - (a.sale_price || a.regular_price || 0)); break;
+      case 'price_low': result.sort((a, b) => (
+        (getCurrentProductPrice(a.regular_price, a.sale_price) ?? Number.POSITIVE_INFINITY) -
+        (getCurrentProductPrice(b.regular_price, b.sale_price) ?? Number.POSITIVE_INFINITY)
+      )); break;
+      case 'price_high': result.sort((a, b) => (
+        (getCurrentProductPrice(b.regular_price, b.sale_price) ?? Number.NEGATIVE_INFINITY) -
+        (getCurrentProductPrice(a.regular_price, a.sale_price) ?? Number.NEGATIVE_INFINITY)
+      )); break;
       case 'rating': result.sort((a, b) => b.reviewSummary.averageRating - a.reviewSummary.averageRating); break;
       default: result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }

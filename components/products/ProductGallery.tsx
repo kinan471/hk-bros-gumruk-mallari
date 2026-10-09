@@ -103,7 +103,7 @@ export default function ProductGallery({
             {getConditionIcon(productCondition)} {productCondition}
           </p>
           <p className="text-xs text-gray-500 mt-2">
-            * Gümrük malları doğası gereği ambalajında küçük değişiklikler olabilir, ancak ürün işlevselliği ve orijinalliği %100 garantilidir.
+            Ürün durumunu sipariş öncesinde açıklama ve görsellerden inceleyebilirsiniz.
           </p>
         </div>
       )}

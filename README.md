@@ -38,6 +38,13 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 - Vercel provides its CDN automatically. On other hosts, configure the CDN to honor Next.js `Cache-Control` headers, include `q` and `mode` in `/api/search` cache keys, and preserve App Router variants (including `rsc` and `_rsc`). Never shared-cache authenticated admin or account responses.
 - These changes reduce repeated page and image work; they do not by themselves certify a specific concurrency target. Validate expected peak traffic with production load tests and ensure the Supabase plan, connection pooling, and database indexes match that load.
 
+## Search engine files
+
+- `/sitemap.xml` is generated from active products and categories, plus the public storefront pages.
+- `/robots.txt` allows public pages and excludes the admin area and login page from crawling.
+- Set `NEXT_PUBLIC_APP_URL` to the canonical site origin (for example, `https://shop.example.com`) in each deployment environment. Sitemap and robots generation fails explicitly if this value is missing.
+- The sitemap reads public catalog data using the Supabase anon key. Keep database row-level security enabled and do not expose service-role keys in client code.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

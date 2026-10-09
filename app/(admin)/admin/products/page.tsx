@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { revalidatePublicCatalog } from '@/lib/utils/revalidatePublicCatalog';
+import { usePopup } from '@/components/ui/PopupProvider';
+import { getCurrentProductPrice } from '@/lib/utils/pricing';
 import { Product, Category } from '@/types/database';
 import {
   Plus, Search, Grid3x3, List, Edit, Trash2,
@@ -18,6 +20,7 @@ type StatusFilter = 'all' | 'published' | 'draft';
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
 
 export default function AdminProductsPage() {
+  const { showPopup } = usePopup();
   const queryClient = useQueryClient();
   const supabase = createClient();
 
@@ -61,7 +64,7 @@ export default function AdminProductsPage() {
     },
     onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      if (!cacheUpdated) alert('Ürün silindi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
+      if (!cacheUpdated) showPopup('Ürün silindi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.', 'warning');
     },
   });
 
@@ -76,7 +79,7 @@ export default function AdminProductsPage() {
     },
     onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      if (!cacheUpdated) alert('Durum güncellendi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
+      if (!cacheUpdated) showPopup('Durum güncellendi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.', 'warning');
     },
   });
 
@@ -335,7 +338,9 @@ export default function AdminProductsPage() {
 
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-lg font-bold text-[#1E3A5F]">
-                    ₺{product.sale_price || product.regular_price || 0}
+                    {getCurrentProductPrice(product.regular_price, product.sale_price) === null
+                      ? 'Fiyat bilgisi yok'
+                      : `₺${getCurrentProductPrice(product.regular_price, product.sale_price)}`}
                   </span>
                   <span className="text-xs text-gray-500">
                     Stok: {product.stock_quantity}
@@ -412,7 +417,11 @@ export default function AdminProductsPage() {
                     <td className="p-4 text-sm text-gray-600">{product.categories?.name || '-'}</td>
                     <td className="p-4">
                       <div>
-                        <p className="font-bold text-[#1E3A5F]">₺{product.sale_price || product.regular_price || 0}</p>
+                        <p className="font-bold text-[#1E3A5F]">
+                          {getCurrentProductPrice(product.regular_price, product.sale_price) === null
+                            ? 'Fiyat bilgisi yok'
+                            : `₺${getCurrentProductPrice(product.regular_price, product.sale_price)}`}
+                        </p>
                         {product.sale_price && (
                           <p className="text-xs text-gray-400 line-through">₺{product.regular_price}</p>
                         )}

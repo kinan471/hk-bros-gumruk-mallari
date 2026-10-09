@@ -18,6 +18,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import CartIcon from '@/components/layout/CartIcon';
+import { getCurrentProductPrice, isDiscountedPrice } from '@/lib/utils/pricing';
 
 type NavigationCategory = Pick<Category, 'id' | 'name' | 'slug' | 'parent_id'>;
 type SearchSuggestion = ProductCardProduct & {
@@ -350,13 +351,17 @@ export default function Header() {
       </div>
 
       <div className="text-right flex-shrink-0">
-        {product.sale_price ? (
+        {isDiscountedPrice(product.regular_price, product.sale_price) ? (
           <>
             <p className="font-bold text-[#1E3A5F] text-xs sm:text-sm">₺{product.sale_price}</p>
             <p className="text-[10px] sm:text-xs text-gray-400 line-through">₺{product.regular_price}</p>
           </>
+        ) : getCurrentProductPrice(product.regular_price, product.sale_price) !== null ? (
+          <p className="font-bold text-[#1E3A5F] text-xs sm:text-sm">
+            ₺{getCurrentProductPrice(product.regular_price, product.sale_price)}
+          </p>
         ) : (
-          <p className="font-bold text-[#1E3A5F] text-xs sm:text-sm">₺{product.regular_price || '0'}</p>
+          <p className="text-xs text-gray-500">Fiyat bilgisi yok</p>
         )}
       </div>
     </Link>

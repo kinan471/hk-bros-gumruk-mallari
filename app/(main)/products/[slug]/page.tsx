@@ -1,13 +1,14 @@
 import { createPublicServerClient } from '@/lib/supabase/public-server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Truck, Shield, RotateCcw, Star } from 'lucide-react';
+import { ArrowLeft, Truck, MessageCircle, RotateCcw, Star } from 'lucide-react';
 import ProductReviewsSection from '@/components/products/ProductReviewsSection';
 import ProductGallery from '@/components/products/ProductGallery';
 import AddToCartButton from '@/components/products/AddToCartButton';
 import ProductCard from '@/components/products/ProductCard';
 import { fetchReviewSummaries } from '@/lib/utils/reviewSummaries';
 import { STORE_RETURN_WINDOW_DAYS, STORE_SHIPPING } from '@/lib/config/store';
+import { getCurrentProductPrice, isDiscountedPrice } from '@/lib/utils/pricing';
 
 export const dynamic = 'force-static';
 export const revalidate = 3600;
@@ -117,9 +118,10 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     ? Math.round((ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length) * 10) / 10
     : 0;
 
-  const hasDiscount = product.sale_price && product.sale_price < (product.regular_price || 0);
+  const hasDiscount = isDiscountedPrice(product.regular_price, product.sale_price);
+  const currentPrice = getCurrentProductPrice(product.regular_price, product.sale_price);
   const discountPercentage = hasDiscount 
-    ? Math.round((1 - (product.sale_price || 0) / (product.regular_price || 1)) * 100) 
+    ? Math.round((1 - (product.sale_price ?? 0) / (product.regular_price ?? 1)) * 100)
     : 0;
 
   return (
@@ -159,7 +161,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                     <Star className="w-3 h-3 fill-current" /> Öne Çıkan
                   </span>
                 )}
-                {product.is_on_sale && (
+                {hasDiscount && (
                   <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full">İndirim</span>
                 )}
               </div>
@@ -183,14 +185,16 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             </div>
 
             <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-              {product.sale_price ? (
+              {hasDiscount ? (
                 <div className="flex items-baseline gap-3 flex-wrap">
                   <span className="text-4xl font-bold text-red-600">₺{product.sale_price}</span>
                   <span className="text-xl text-gray-400 line-through">₺{product.regular_price}</span>
                   <span className="px-2 py-1 bg-red-100 text-red-600 text-sm font-bold rounded-md">%{discountPercentage} İndirim</span>
                 </div>
+              ) : currentPrice !== null ? (
+                <div className="text-4xl font-bold text-[#1E3A5F]">₺{currentPrice}</div>
               ) : (
-                <div className="text-4xl font-bold text-[#1E3A5F]">₺{product.regular_price || '0'}</div>
+                <div className="text-lg font-medium text-gray-500">Fiyat bilgisi yok</div>
               )}
               <p className="text-xs text-gray-500 mt-2">KDV Dahil • {STORE_SHIPPING.freeShippingMinimum.toLocaleString('tr-TR')} TL ve üzeri kargo ücretsiz</p>
             </div>
@@ -219,8 +223,8 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 <span className="text-xs font-medium text-gray-700">Hızlı Teslimat</span>
               </div>
               <div className="flex flex-col items-center text-center p-3 bg-white rounded-xl border border-gray-100">
-                <Shield className="w-5 h-5 text-[#1E3A5F] mb-1" />
-                <span className="text-xs font-medium text-gray-700">Güvenli Ödeme</span>
+                <MessageCircle className="w-5 h-5 text-[#1E3A5F] mb-1" />
+                <span className="text-xs font-medium text-gray-700">WhatsApp ile Sipariş Onayı</span>
               </div>
               <div className="flex flex-col items-center text-center p-3 bg-white rounded-xl border border-gray-100">
                 <RotateCcw className="w-5 h-5 text-[#1E3A5F] mb-1" />

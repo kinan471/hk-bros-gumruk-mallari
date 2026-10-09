@@ -7,6 +7,7 @@ import type { ReviewSummary } from '@/lib/utils/reviewSummaries';
 import { getFavoriteIds, saveFavoriteIds, subscribeToFavorites } from '@/lib/utils/wishlist';
 import Link from 'next/link';
 import { IMAGE_BLUR_DATA_URL } from '@/lib/utils/imagePlaceholder';
+import { getCurrentProductPrice, isDiscountedPrice } from '@/lib/utils/pricing';
 
 interface ProductCardProps {
   product: ProductCardProduct;
@@ -23,9 +24,10 @@ export default function ProductCard({ product, reviewSummary, preload = false }:
   const avgRating = reviewSummary.averageRating;
   const reviewCount = reviewSummary.reviewCount;
 
-  const hasDiscount = product.sale_price && product.sale_price < (product.regular_price || 0);
+  const hasDiscount = isDiscountedPrice(product.regular_price, product.sale_price);
+  const currentPrice = getCurrentProductPrice(product.regular_price, product.sale_price);
   const discountPercentage = hasDiscount
-    ? Math.round((1 - (product.sale_price || 0) / (product.regular_price || 1)) * 100)
+    ? Math.round((1 - (product.sale_price ?? 0) / (product.regular_price ?? 1)) * 100)
     : 0;
   const stockQuantity = product.stock_quantity ?? 0;
   const isOutOfStock =
@@ -155,8 +157,10 @@ export default function ProductCard({ product, reviewSummary, preload = false }:
                 <span className="text-xl sm:text-2xl font-bold text-red-600">₺{product.sale_price}</span>
                 <span className="text-xs text-gray-400 line-through">₺{product.regular_price}</span>
               </>
+            ) : currentPrice !== null ? (
+              <span className="text-xl sm:text-2xl font-bold text-[#1E3A5F]">₺{currentPrice}</span>
             ) : (
-              <span className="text-xl sm:text-2xl font-bold text-[#1E3A5F]">₺{product.regular_price || '0'}</span>
+              <span className="text-sm font-medium text-gray-500">Fiyat bilgisi yok</span>
             )}
           </div>
 

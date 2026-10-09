@@ -36,8 +36,8 @@ export default function AboutPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
                   <ShieldCheck className="w-10 h-10 text-[#1E3A5F] mb-4" />
-                  <h3 className="font-bold text-gray-900 mb-2">%100 Orijinal Ürün</h3>
-                  <p className="text-sm text-gray-600">Sattığımız tüm ürünlerin orijinalliğini garanti ediyoruz. Sahte ürün asla satılmaz.</p>
+                  <h3 className="font-bold text-gray-900 mb-2">Açık Ürün Bilgileri</h3>
+                  <p className="text-sm text-gray-600">Ürün durumu ve özellikleri, ürün sayfalarında paylaşılan açıklama ve görsellerde belirtilir.</p>
                 </div>
                 <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
                   <Truck className="w-10 h-10 text-[#1E3A5F] mb-4" />

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/lib/cart/CartContext';
 import { calculateShippingCost, STORE_CONTACT, STORE_SHIPPING } from '@/lib/config/store';
+import { usePopup } from '@/components/ui/PopupProvider';
 import {
   ShoppingCart, Trash2, Plus, Minus,
   ArrowLeft, MessageCircle, ShoppingBag,
@@ -52,6 +53,7 @@ function isCheckoutResult(value: unknown): value is CheckoutResult {
 }
 
 export default function CartPage() {
+  const { showPopup } = usePopup();
   const {
     items,
     removeItem,
@@ -76,15 +78,15 @@ export default function CartPage() {
 
   const handleCheckout = async () => {
     if (!customerName.trim()) {
-      alert('Lütfen adınızı girin');
+      showPopup('Lütfen adınızı girin', 'warning');
       return;
     }
     if (!customerPhone.trim()) {
-      alert('Lütfen telefon numaranızı girin');
+      showPopup('Lütfen telefon numaranızı girin', 'warning');
       return;
     }
     if (!customerAddress.trim()) {
-      alert('Lütfen teslimat adresinizi girin');
+      showPopup('Lütfen teslimat adresinizi girin', 'warning');
       return;
     }
 
@@ -155,7 +157,7 @@ export default function CartPage() {
       clearCart();
     } catch (error) {
       console.error('Checkout error:', error);
-      alert(error instanceof Error ? error.message : 'Sipariş oluşturulurken hata oluştu.');
+      showPopup(error instanceof Error ? error.message : 'Sipariş oluşturulurken hata oluştu.', 'error');
       setIsSending(false);
     }
   };

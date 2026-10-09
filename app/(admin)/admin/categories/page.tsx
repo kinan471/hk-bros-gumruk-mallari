@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { generateSlug } from '@/lib/utils/slug';
 import { revalidatePublicCatalog } from '@/lib/utils/revalidatePublicCatalog';
+import { usePopup } from '@/components/ui/PopupProvider';
 import type { Category } from '@/types/database';
 import {
   Plus, Edit, Trash2, Eye, EyeOff,
@@ -18,6 +19,7 @@ type CategoryTreeNode = CategoryRow & {
 };
 
 export default function AdminCategoriesPage() {
+  const { showPopup } = usePopup();
   const queryClient = useQueryClient();
   const supabase = createClient();
 
@@ -55,7 +57,7 @@ export default function AdminCategoriesPage() {
     onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
       setNewCategoryName('');
-      if (!cacheUpdated) alert('Kategori kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
+      if (!cacheUpdated) showPopup('Kategori kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.', 'warning');
     },
   });
 
@@ -77,7 +79,7 @@ export default function AdminCategoriesPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
       setNewSubCategoryName('');
       setAddingSubTo(null);
-      if (!cacheUpdated) alert('Alt kategori kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
+      if (!cacheUpdated) showPopup('Alt kategori kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.', 'warning');
     },
   });
 
@@ -93,7 +95,7 @@ export default function AdminCategoriesPage() {
     onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
       setEditingId(null);
-      if (!cacheUpdated) alert('Kategori güncellendi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
+      if (!cacheUpdated) showPopup('Kategori güncellendi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.', 'warning');
     },
   });
 
@@ -105,7 +107,7 @@ export default function AdminCategoriesPage() {
     },
     onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
-      if (!cacheUpdated) alert('Kategori silindi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
+      if (!cacheUpdated) showPopup('Kategori silindi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.', 'warning');
     },
   });
 
@@ -120,7 +122,7 @@ export default function AdminCategoriesPage() {
     },
     onSuccess: (cacheUpdated) => {
       queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
-      if (!cacheUpdated) alert('Kategori durumu güncellendi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
+      if (!cacheUpdated) showPopup('Kategori durumu güncellendi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.', 'warning');
     },
   });
 

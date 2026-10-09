@@ -2,9 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { 
   Package, ShoppingCart, AlertTriangle,
-  TrendingUp, Eye, Clock, ArrowUpRight,
+  Eye, Clock, ArrowUpRight,
   Plus, MoreVertical
 } from 'lucide-react';
+import { getCurrentProductPrice } from '@/lib/utils/pricing';
 
 export const metadata = {
   title: 'Kontrol Paneli - HK BROS Admin',
@@ -36,32 +37,24 @@ export default async function AdminDashboard() {
       label: 'Toplam Ürün',
       value: totalProducts || 0,
       icon: Package,
-      change: '+12%',
-      trend: 'up',
       color: 'from-blue-500 to-blue-600',
     },
     {
       label: 'Kategoriler',
       value: totalCategories || 0,
       icon: Package,
-      change: '+3%',
-      trend: 'up',
       color: 'from-purple-500 to-purple-600',
     },
     {
       label: 'Toplam Sipariş',
       value: totalOrders || 0,
       icon: ShoppingCart,
-      change: '+8%',
-      trend: 'up',
       color: 'from-green-500 to-green-600',
     },
     {
       label: 'Düşük Stok',
       value: lowStockProducts || 0,
       icon: AlertTriangle,
-      change: 'Uyarı',
-      trend: 'down',
       color: 'from-orange-500 to-orange-600',
     },
   ];
@@ -87,15 +80,9 @@ export default async function AdminDashboard() {
               key={index}
               className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between mb-4">
+              <div className="mb-4">
                 <div className={`w-12 h-12 bg-gradient-to-br ${stat.color} rounded-xl flex items-center justify-center shadow-lg`}>
                   <Icon className="w-6 h-6 text-white" />
-                </div>
-                <div className={`flex items-center gap-1 text-xs font-semibold ${
-                  stat.trend === 'up' ? 'text-green-600' : 'text-orange-600'
-                }`}>
-                  <TrendingUp className="w-3 h-3" />
-                  {stat.change}
                 </div>
               </div>
               <div className="space-y-1">
@@ -134,7 +121,9 @@ export default async function AdminDashboard() {
                         <span>{product.categories?.[0]?.name || 'Kategori yok'}</span>
                         <span>•</span>
                         <span className="font-medium text-[#1E3A5F]">
-                          ₺{product.sale_price || product.regular_price || 0}
+                          {getCurrentProductPrice(product.regular_price, product.sale_price) === null
+                            ? 'Fiyat bilgisi yok'
+                            : `₺${getCurrentProductPrice(product.regular_price, product.sale_price)}`}
                         </span>
                       </div>
                     </div>
@@ -223,7 +212,9 @@ export default async function AdminDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-[#1E3A5F] text-sm">
-                        ₺{product.sale_price || product.regular_price || 0}
+                        {getCurrentProductPrice(product.regular_price, product.sale_price) === null
+                          ? 'Fiyat bilgisi yok'
+                          : `₺${getCurrentProductPrice(product.regular_price, product.sale_price)}`}
                       </p>
                     </div>
                   </div>

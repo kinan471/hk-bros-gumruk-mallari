@@ -22,7 +22,7 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
-              En kaliteli gümrük ürünlerini en uygun fiyatlarla kapınıza kadar getiriyoruz. Güvenli alışverişin adresi.
+              Ürün bilgilerini, fiyatları ve ürün durumlarını inceleyerek sipariş verebilirsiniz.
             </p>
             
             <div className="flex gap-3 pt-2">

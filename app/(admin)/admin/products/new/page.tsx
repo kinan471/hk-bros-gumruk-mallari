@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { generateSlug } from '@/lib/utils/slug';
 import { revalidatePublicCatalog } from '@/lib/utils/revalidatePublicCatalog';
+import { usePopup } from '@/components/ui/PopupProvider';
 import { compressImage } from '@/lib/utils/compressImage';
 import type { Product } from '@/types/database';
 import {
@@ -80,6 +81,7 @@ function CategoryTreeNodeComponent({
 }
 
 export default function NewProductPage() {
+  const { showPopup } = usePopup();
   const router = useRouter();
   const supabase = createClient();
 
@@ -126,7 +128,7 @@ export default function NewProductPage() {
       setImagePreviews(prev => [...prev, ...previews]);
     } catch (error) {
       console.error('Image compression error:', error);
-      alert('Resim sıkıştırılırken hata oluştu');
+      showPopup('Resim sıkıştırılırken hata oluştu', 'error');
     } finally {
       setUploadingImages(false);
     }
@@ -213,13 +215,16 @@ export default function NewProductPage() {
       }
 
       const cacheUpdated = await revalidatePublicCatalog();
-      alert(cacheUpdated
-        ? 'Ürün başarıyla eklendi!'
-        : 'Ürün kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
-      router.push('/admin/products');
+      showPopup(
+        cacheUpdated
+          ? 'Ürün başarıyla eklendi!'
+          : 'Ürün kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.',
+        cacheUpdated ? 'success' : 'warning',
+        () => router.push('/admin/products')
+      );
     } catch (error) {
       console.error('Error saving product:', error);
-      alert('Ürün kaydedilirken hata oluştu: ' + (error instanceof Error ? error.message : String(error)));
+      showPopup('Ürün kaydedilirken hata oluştu: ' + (error instanceof Error ? error.message : String(error)), 'error');
     } finally {
       setIsSubmitting(false);
     }

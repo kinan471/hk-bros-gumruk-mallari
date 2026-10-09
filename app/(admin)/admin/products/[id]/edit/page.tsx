@@ -7,6 +7,7 @@ import NextImage from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { generateSlug } from '@/lib/utils/slug';
 import { revalidatePublicCatalog } from '@/lib/utils/revalidatePublicCatalog';
+import { usePopup } from '@/components/ui/PopupProvider';
 import { compressImage } from '@/lib/utils/compressImage';
 import type { Product } from '@/types/database';
 import {
@@ -117,6 +118,7 @@ function CategoryTreeNodeComponent({
 }
 
 export default function EditProductPage() {
+  const { showPopup } = usePopup();
   const router = useRouter();
   const params = useParams();
   const productId = params.id as string;
@@ -250,7 +252,7 @@ export default function EditProductPage() {
       setNewImagePreviews(prev => [...prev, ...previews]);
     } catch (error) {
       console.error('Image compression error:', error);
-      alert('Resim sıkıştırılırken hata oluştu');
+      showPopup('Resim sıkıştırılırken hata oluştu', 'error');
     } finally {
       setUploadingImages(false);
     }
@@ -369,13 +371,16 @@ export default function EditProductPage() {
       }
 
       const cacheUpdated = await revalidatePublicCatalog();
-      alert(cacheUpdated
-        ? 'Ürün başarıyla güncellendi!'
-        : 'Ürün kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.');
-      router.push('/admin/products');
+      showPopup(
+        cacheUpdated
+          ? 'Ürün başarıyla güncellendi!'
+          : 'Ürün kaydedildi; ancak mağaza önbelleği yenilenemedi. Değişiklikler kısa süre içinde görünür.',
+        cacheUpdated ? 'success' : 'warning',
+        () => router.push('/admin/products')
+      );
     } catch (error) {
       console.error('Error updating product:', error);
-      alert('Ürün güncellenirken hata oluştu: ' + (error instanceof Error ? error.message : String(error)));
+      showPopup('Ürün güncellenirken hata oluştu: ' + (error instanceof Error ? error.message : String(error)), 'error');
     } finally {
       setIsSubmitting(false);
     }
